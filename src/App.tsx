@@ -24,6 +24,8 @@ import {
   TicketIcon,
 } from "./icons";
 import { GAMES, type Game } from "./games";
+import { AdminDashboard } from "./AdminDashboard";
+import { getSettings } from "./adminStore";
 import { CINEMA_HALL, SERIES_HALL } from "./cinema";
 import { MediaHallView } from "./MediaHall";
 import {
@@ -58,7 +60,7 @@ import {
   BookmarkIcon,
 } from "./components";
 
-type View = { t: "home" } | { t: "cat"; id: CategoryId };
+type View = { t: "home" } | { t: "cat"; id: CategoryId } | { t: "admin" };
 
 const DUST = [
   { right: "10%", top: "30%", d: "0s" },
@@ -311,7 +313,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen font-body text-ink">
       <div className="grain-layer" aria-hidden />
-      {intro && !reduced && (
+      {intro && !reduced && getSettings().showIntro && (
         <IntroOverlay
           onDone={() => {
             setIntro(false);
@@ -324,6 +326,15 @@ const App: React.FC = () => {
         />
       )}
 
+      {view.t === "admin" ? (
+        <AdminDashboard
+          onExit={() => {
+            setView({ t: "home" });
+            window.scrollTo(0, 0);
+          }}
+        />
+      ) : (
+        <>
       {/* ═══ نوار بالای چسبان ═══ */}
       <header className="sticky top-0 z-40 border-b border-line bg-paper/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center gap-2.5 px-4 py-2.5 sm:px-6">
@@ -336,7 +347,7 @@ const App: React.FC = () => {
             aria-label="سردر شهرفرنگ"
           >
             <StarBurst className="animate-spin-slow h-6 w-6 text-sienna" />
-            <span className="font-display text-2xl font-bold leading-none">شهرفرنگ</span>
+            <span className="font-display text-2xl font-bold leading-none">{getSettings().siteTitle}</span>
             <span className="font-type mt-1 hidden text-[8px] tracking-[0.25em] text-ink-3 xl:block" dir="ltr">
               RETIRED OBJECTS
             </span>
@@ -399,6 +410,21 @@ const App: React.FC = () => {
             }`}
           >
             {soundOn ? <SoundOnIcon className="h-4 w-4" /> : <SoundOffIcon className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={() => {
+              click();
+              setView({ t: "admin" });
+              window.scrollTo(0, 0);
+            }}
+            title="پیشخوان مدیریت"
+            aria-label="پیشخوان مدیریت"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line-2 text-ink-3 transition-all hover:border-gold hover:bg-gold/10 hover:text-gold-3 active:scale-90"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3.2" />
+              <path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4L9.6 5a7.7 7.7 0 0 0-2.6 1.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.7 7.7 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.7 7.7 0 0 0 2.6-1.5l2.4 1 2-3.5-2-1.5Z" />
+            </svg>
           </button>
         </div>
         <ScrollProgress />
@@ -663,7 +689,7 @@ const App: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <StarBurst className="h-6 w-6 text-gold-2" />
-              <span className="font-display text-3xl font-bold">شهرفرنگ</span>
+              <span className="font-display text-3xl font-bold">{getSettings().siteTitle}</span>
             </div>
             <p className="mt-3 text-[13px] leading-7 text-paper/70">
               موزه‌ی دیجیتال اشیای بازنشسته؛ جایی برای قدم‌زدن میان چیزهایی که زمانی همه‌چیز بودند.
@@ -738,12 +764,27 @@ const App: React.FC = () => {
         <div className="border-t border-paper/10">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-5 text-center sm:flex-row sm:px-6 sm:text-right">
             <p className="text-[12px] text-paper/60">© {toFa(1404)} شهرفرنگ — ساخته‌شده با نوستالژی و کمی غبار</p>
+            <button
+              onClick={() => {
+                setView({ t: "admin" });
+                window.scrollTo(0, 0);
+              }}
+              className="flex items-center gap-1.5 text-[12px] font-bold text-gold-2/80 transition-colors hover:text-gold-2"
+            >
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3.2" />
+                <path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.5-2.4 1a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4L9.6 5a7.7 7.7 0 0 0-2.6 1.5l-2.4-1-2 3.5 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a7.7 7.7 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.7 7.7 0 0 0 2.6-1.5l2.4 1 2-3.5-2-1.5Z" />
+              </svg>
+              پیشخوان مدیریت
+            </button>
             <p className="font-type text-[9px] tracking-[0.3em] text-gold-2/60" dir="ltr">
               ALL OBJECTS RETIRED WITH HONOR · 1801–2000
             </p>
           </div>
         </div>
       </footer>
+        </>
+      )}
 
       {/* ═══ لایه‌های شناور ═══ */}
       {modalItem && (
