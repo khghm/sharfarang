@@ -485,6 +485,30 @@ input.time-range:disabled { opacity: 0.35; cursor: not-allowed; }
   background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 3px, transparent 3px 10px);
 }
 
+.eq-bar {
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: #d9b25f;
+  transition: height 0.25s ease;
+}
+[data-playing="true"] .eq-bar {
+  animation: eq-kf 0.65s ease-in-out infinite alternate;
+}
+@keyframes eq-kf {
+  from { height: 4px; }
+  to { height: 16px; }
+}
+
+.shimmer {
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.05) 30%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.05) 70%);
+  background-size: 220% 100%;
+  animation: shimmer-kf 1.3s linear infinite;
+}
+@keyframes shimmer-kf {
+  to { background-position: -220% 0; }
+}
+
 .bulb {
   width: 7px;
   height: 7px;

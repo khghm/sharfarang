@@ -2,7 +2,7 @@
    شهرفرنگ — اجزای رابط موزه (نسخه‌ی پیشرفته)
    ============================================================ */
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ITEMS,
   MAX_YEAR,
@@ -1964,6 +1964,213 @@ export const NostalgiaSection: React.FC = () => {
   );
 };
 
+/* ─────────────── عکس واقعی و تاریخچه‌ی بازی‌ها (ویکی‌پدیا) ─────────────── */
+
+type GameMedia = { hero: string | null; gallery: string[]; extract: string };
+const GMEM = new Map<string, GameMedia>();
+
+async function fetchGameMedia(g: Game): Promise<GameMedia> {
+  if (GMEM.has(g.id)) return GMEM.get(g.id)!;
+  const out: GameMedia = { hero: null, gallery: [], extract: "" };
+  try {
+    const ck = sessionStorage.getItem(`sf-gm:${g.id}`);
+    if (ck) {
+      const j = JSON.parse(ck) as GameMedia;
+      GMEM.set(g.id, j);
+      return j;
+    }
+    let title = cleanEn(g.nameEn);
+    const sr = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(title)}&limit=1&namespace=0&format=json&origin=*`
+    );
+    if (sr.ok) {
+      const j = await sr.json();
+      title = (j?.[1]?.[0] as string) || title;
+    }
+    const s = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+    if (s.ok) {
+      const sj = await s.json();
+      if (sj?.type !== "disambiguation") {
+        out.extract = ((sj.extract || "") as string).split(/\n/)[0] || "";
+        out.hero = sj?.thumbnail?.source ?? sj?.originalimage?.source ?? null;
+      }
+    }
+    const im = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=images&imlimit=20&format=json&origin=*`
+    );
+    if (im.ok) {
+      const ij = await im.json();
+      const pages = Object.values<any>(ij.query?.pages ?? {})[0] as any;
+      const names: string[] = ((pages?.images ?? []) as { title: string }[])
+        .map((x) => x.title)
+        .filter((t) => /\.(jpe?g|png|webp)$/i.test(t))
+        .filter(
+          (t) =>
+            !/svg|icon|logo|symbol|wiktionary|question_book|edit-clear|disambig|cscr|padlock|commons-logo|wikipedia|nospam|edit-icon/i.test(t)
+        )
+        .slice(0, 6);
+      if (names.length) {
+        const ii = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${names.map(encodeURIComponent).join("|")}&prop=imageinfo&iiprop=url&iiurlwidth=480&format=json&origin=*`
+        );
+        if (ii.ok) {
+          const iij = await ii.json();
+          const urls = Object.values<any>(iij.query?.pages ?? {})
+            .map((pg: any) => pg.imageinfo?.[0]?.thumburl ?? pg.imageinfo?.[0]?.url)
+            .filter(Boolean) as string[];
+          let gal = urls.slice(0, 4);
+          if (out.hero && !gal.includes(out.hero)) gal = [out.hero, ...gal].slice(0, 4);
+          out.gallery = gal;
+          if (!out.hero && gal[0]) out.hero = gal[0];
+        }
+      }
+    }
+  } catch {
+    /* آفلاین */
+  }
+  GMEM.set(g.id, out);
+  try {
+    sessionStorage.setItem(`sf-gm:${g.id}`, JSON.stringify(out));
+  } catch {
+    /* کش پر */
+  }
+  return out;
+}
+
+export const GamePhoto: React.FC<{ g: Game; className?: string }> = ({ g, className = "" }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  const { ref, inView } = useInView<HTMLSpanElement>(0.05);
+  useEffect(() => {
+    if (!inView) return;
+    let live = true;
+    fetchGameMedia(g).then((m) => {
+      if (live) setSrc(m.hero);
+    });
+    return () => {
+      live = false;
+    };
+  }, [inView, g]);
+  return (
+    <span ref={ref} className={className} aria-hidden>
+      {src && (
+        <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" className="photo-aged h-full w-full rounded-[inherit] object-cover" />
+      )}
+    </span>
+  );
+};
+
+/* ─────────────────────── نغمه‌ی ۸ بیتی (سینت‌سایزر) ─────────────────────── */
+
+const mulberry32 = (a: number) => () => {
+  a |= 0;
+  a = (a + 0x6d2b79f5) | 0;
+  let t = Math.imul(a ^ (a >>> 15), 1 | a);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+
+const ChiptunePlayer: React.FC<{ seed: string }> = ({ seed }) => {
+  const [playing, setPlaying] = useState(false);
+  const ctxRef = useRef<AudioContext | null>(null);
+  const timerRef = useRef<number | null>(null);
+
+  const stop = useCallback(() => {
+    if (timerRef.current) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (ctxRef.current) {
+      ctxRef.current.close().catch(() => {});
+      ctxRef.current = null;
+    }
+    setPlaying(false);
+  }, []);
+
+  useEffect(() => () => stop(), [stop]);
+
+  const start = () => {
+    const AC: typeof AudioContext =
+      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AC();
+    ctxRef.current = ctx;
+    let h = 0;
+    for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const rng = mulberry32(h);
+    const root = 40 + Math.floor(rng() * 9);
+    const scale = [0, 3, 5, 7, 10, 12, 15, 17];
+    const tempo = 116 + Math.floor(rng() * 62);
+    const stepDur = 60 / tempo / 2;
+    const melody = Array.from({ length: 32 }, () =>
+      rng() < 0.24 ? -1 : scale[Math.floor(rng() * scale.length)] + (rng() < 0.35 ? 12 : 0)
+    );
+    const m2f = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
+    const blip = (freq: number, t: number, dur: number, type: OscillatorType, vol: number) => {
+      const o = ctx.createOscillator();
+      const gn = ctx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      gn.gain.setValueAtTime(0.0001, t);
+      gn.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(gn);
+      gn.connect(ctx.destination);
+      o.start(t);
+      o.stop(t + dur + 0.03);
+    };
+    const hat = (t: number) => {
+      const buf = ctx.createBuffer(1, Math.max(1, Math.floor(0.04 * ctx.sampleRate)), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const f = ctx.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 5200;
+      const gn = ctx.createGain();
+      gn.gain.setValueAtTime(0.02, t);
+      gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+      src.connect(f);
+      f.connect(gn);
+      gn.connect(ctx.destination);
+      src.start(t);
+    };
+    let step = 0;
+    const tick = () => {
+      const t = ctx.currentTime + 0.03;
+      const i = step % 32;
+      const m = melody[i];
+      if (m >= 0) blip(m2f(root + 12 + m), t, stepDur * 0.92, "square", 0.05);
+      if (step % 4 === 0) blip(m2f(root - 12 + (step % 8 === 0 ? 0 : 7)), t, stepDur * 3.4, "triangle", 0.085);
+      if (step % 2 === 0) hat(t);
+      step++;
+    };
+    tick();
+    timerRef.current = window.setInterval(tick, stepDur * 1000);
+    setPlaying(true);
+  };
+
+  return (
+    <div className="relative w-full">
+      <button
+        onClick={() => (playing ? stop() : start())}
+        className="flex w-full items-center justify-center gap-2.5 rounded-full border border-gold/50 bg-black/30 px-4 py-2.5 text-[13px] font-bold text-gold-2 transition-all hover:bg-gold/20 active:scale-95"
+        aria-pressed={playing}
+      >
+        {playing ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+        {playing ? "توقف نغمه" : "پخش نغمه‌ی ۸ بیتی"}
+        <span className="mr-1 flex h-4 items-end gap-[3px]" data-playing={playing ? "true" : "false"} aria-hidden>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <span key={i} className="eq-bar" style={{ animationDelay: `${i * 0.11}s` }} />
+          ))}
+        </span>
+      </button>
+      <p className="mt-1.5 text-center text-[10px] leading-4 text-paper/45">
+        ملودیِ الهام‌گرفته‌ی ساخته‌شده برای همین بازی — موسیقی اصلی، اثرِ آهنگ‌سازانِ خودِ بازی است
+      </p>
+    </div>
+  );
+};
+
 /* ─────────────────────── تالار گنجینه‌ی بازی‌ها ─────────────────────── */
 
 export const GameModal: React.FC<{
@@ -1986,6 +2193,31 @@ export const GameModal: React.FC<{
         .slice(0, 4),
     [game]
   );
+
+  const [media, setMedia] = useState<GameMedia | null>(null);
+  const [mainIdx, setMainIdx] = useState(0);
+  const [imgFail, setImgFail] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    setMedia(null);
+    setMainIdx(0);
+    setImgFail(false);
+    fetchGameMedia(game).then((m) => {
+      if (live) setMedia(m);
+    });
+    return () => {
+      live = false;
+    };
+  }, [game]);
+
+  const photos = useMemo(() => {
+    if (!media) return [];
+    const arr = [...(media.hero ? [media.hero] : []), ...media.gallery.filter((x) => x !== media.hero)];
+    return Array.from(new Set(arr)).slice(0, 4);
+  }, [media]);
+  const hero = photos[mainIdx] ?? null;
+  const showImage = !!hero && !imgFail;
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
@@ -2028,13 +2260,57 @@ export const GameModal: React.FC<{
             style={{ background: `linear-gradient(165deg, ${plat.c}55, rgba(24,17,10,0.95))` }}
           >
             <span className="cart-grooves" aria-hidden />
-            <span className="scanlines pointer-events-none absolute inset-0 opacity-30" aria-hidden />
             <span className="font-type relative text-[10px] tracking-[0.3em] text-paper/60" dir="ltr">
               GAME № {plaqueNo(idx + 1)}
             </span>
-            <span className="animate-bob relative text-[88px] leading-none drop-shadow-[0_18px_30px_rgba(0,0,0,0.6)]">
-              {game.emoji}
-            </span>
+            {/* صحنه‌ی رسانه */}
+            <div className="relative mx-auto h-48 w-full max-w-[290px] overflow-hidden rounded-xl border border-paper/20 bg-black/40 sm:h-52">
+              {showImage ? (
+                <img
+                  key={hero}
+                  src={hero!}
+                  alt={`تصویری از ${game.name}`}
+                  referrerPolicy="no-referrer"
+                  className="fade-in h-full w-full object-cover"
+                  onError={() => setImgFail(true)}
+                />
+              ) : (
+                <span className="absolute inset-0 grid place-items-center">
+                  <span className="animate-bob text-[84px] leading-none drop-shadow-[0_18px_30px_rgba(0,0,0,0.6)]">
+                    {game.emoji}
+                  </span>
+                </span>
+              )}
+              {!media && <span className="shimmer absolute inset-0" aria-hidden />}
+              <span className="scanlines pointer-events-none absolute inset-0 opacity-25" aria-hidden />
+              {showImage && (
+                <span className="absolute bottom-1.5 right-2 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-paper/75">
+                  عکس واقعی · ویکی‌پدیا
+                </span>
+              )}
+            </div>
+            {/* گالری تصاویر */}
+            {photos.length > 1 && (
+              <div className="relative mx-auto flex w-full max-w-[290px] justify-center gap-1.5">
+                {photos.map((p, i) => (
+                  <button
+                    key={p + i}
+                    onClick={() => {
+                      setMainIdx(i);
+                      setImgFail(false);
+                    }}
+                    className={`h-10 w-14 shrink-0 overflow-hidden rounded border transition-all active:scale-95 ${
+                      i === mainIdx ? "border-gold-2 opacity-100 ring-1 ring-gold-2" : "border-paper/20 opacity-55 hover:opacity-90"
+                    }`}
+                    aria-label={`تصویر ${toFa(i + 1)} از ${game.name}`}
+                  >
+                    <img src={p} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* نغمه‌ی بازی */}
+            <ChiptunePlayer seed={game.id} />
             <div className="relative grid w-full grid-cols-2 gap-2 text-paper/90">
               <div className="rounded-lg border border-paper/15 bg-black/25 px-3 py-2.5">
                 <p className="text-[10px] text-paper/55">سال انتشار</p>
@@ -2072,6 +2348,12 @@ export const GameModal: React.FC<{
                   DID YOU KNOW?
                 </p>
                 <p className="mt-1 text-[13.5px] leading-7 text-paper/85">{game.note}</p>
+              </div>
+            )}
+            {media?.extract && (
+              <div className="mt-4 rounded-xl border border-paper/15 bg-black/20 p-4" dir="ltr">
+                <p className="font-type text-[9px] tracking-[0.3em] text-paper/45">HISTORY · WIKIPEDIA (EN)</p>
+                <p className="mt-1.5 text-[13px] leading-6 text-paper/75">{media.extract}</p>
               </div>
             )}
 
@@ -2291,8 +2573,9 @@ export const GamesHallView: React.FC<{ onBack: () => void; onOpenItem: (i: Item)
                 style={{ background: `linear-gradient(160deg, ${p.c}4d 0%, rgba(26,19,11,0.96) 70%)` }}
               >
                 <span className="cart-grooves" aria-hidden />
-                <span className="relative grid h-14 place-items-center text-5xl drop-shadow-[0_10px_14px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
-                  {g.emoji}
+                <span className="relative grid h-14 place-items-center overflow-hidden rounded-lg text-5xl drop-shadow-[0_10px_14px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
+                  <span className="emoji-aged">{g.emoji}</span>
+                  <GamePhoto g={g} className={`${PHOTO_FADE} z-[1]`} />
                 </span>
                 <span className="font-type relative mt-2 block truncate text-center text-[8.5px] tracking-[0.18em] text-paper/55" dir="ltr">
                   {g.nameEn}

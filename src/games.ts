@@ -5,7 +5,7 @@
 export type PlatformId =
   | "atari2600" | "arcade" | "nes" | "snes" | "megadrive" | "gameboy"
   | "ps1" | "n64" | "ps2" | "gamecube" | "dreamcast" | "pc"
-  | "msx" | "amiga" | "saturn" | "gba" | "gamegear";
+  | "msx" | "amiga" | "saturn" | "gba" | "gamegear" | "sms";
 
 export interface Game {
   id: string;
@@ -37,6 +37,7 @@ export const PLATFORMS: { id: PlatformId; fa: string; c: string }[] = [
   { id: "saturn", fa: "سگا ساترن", c: "#3a5a4a" },
   { id: "gba", fa: "گیم‌بوی ادونس", c: "#4a5a8a" },
   { id: "gamegear", fa: "گیم گیر", c: "#54423a" },
+  { id: "sms", fa: "سگا مستر سیستم", c: "#4f8fd6" },
 ];
 
 export const platformOf = (id: PlatformId) => PLATFORMS.find((p) => p.id === id)!;
@@ -60,6 +61,7 @@ export const CONSOLE_ITEM: Partial<Record<PlatformId, string>> = {
   amiga: "amiga-500",
   saturn: "sega-saturn",
   gamegear: "sega-game-gear",
+  sms: "sega-master-system",
 };
 
 export const GAMES: Game[] = [
@@ -399,6 +401,63 @@ export const GAMES: Game[] = [
   { id: "shining-gg", name: "شینینگ فورس: شمشیر هاجیا", nameEn: "SHINING FORCE: SWORD OF HAJYA", platform: "gamegear", year: 1994, genre: "استراتژی", emoji: "⚔️", desc: "استراتژیِ نوبتیِ جیبی؛ انحصاریِ محبوب گیم گیر." },
   { id: "columns-gg", name: "کالمز", nameEn: "COLUMNS (GAME GEAR)", platform: "gamegear", year: 1990, genre: "معمایی", emoji: "💎", desc: "جواهرهای سه‌تایی؛ تتریسِ رنگیِ سگا." },
   { id: "sor-gg", name: "شورش در شهر (گیم گیر)", nameEn: "STREETS OF RAGE (GG)", platform: "gamegear", year: 1992, genre: "اکشن", emoji: "👊", desc: "شهرِ فاسد در جیب؛ اکسل و بلیزِ کوچک." },
+
+  /* ── سگا مستر سیستم ── */
+  { id: "alex-kidd", name: "الکس کید در سرزمین معجزه", nameEn: "ALEX KIDD IN MIRACLE WORLD", platform: "sms", year: 1986, genre: "پلتفرمر", emoji: "🧒", desc: "ماستِ سگای پیش از سونیک؛ پسرکی که با مشت، سنگ را خرد می‌کرد.", note: "در بعضی کشورها بازی داخلِ خودِ کنسول بود؛ نخستین خاطره‌ی میلیون‌ها بچه." },
+  { id: "wonder-boy", name: "واندر بوی", nameEn: "WONDER BOY", platform: "sms", year: 1986, genre: "پلتفرمر", emoji: "🛹", desc: "پسری با تَبَر و اسکیت؛ میوه‌ها را بگیر وگرنه جانت آب می‌شود." },
+  { id: "fantasy-zone", name: "فانتزی زون", nameEn: "FANTASY ZONE", platform: "sms", year: 1986, genre: "شوتر", emoji: "🎈", desc: "سفینه‌ی بالدار در سیاره‌های رنگی؛ شوتری که لبخند می‌زد و می‌کشت." },
+  { id: "psycho-fox", name: "سایکو فاکس", nameEn: "PSYCHO FOX", platform: "sms", year: 1989, genre: "پلتفرمر", emoji: "🦊", desc: "روباهی که گرگ و پرنده می‌شد؛ پرش‌هایش هنوز خواب شب خیلی‌هاست." },
+  { id: "wonder-boy-3", name: "واندر بوی ۳: تله‌ی اژدها", nameEn: "WONDER BOY III: THE DRAGON'S TRAP", platform: "sms", year: 1989, genre: "ماجراجویی", emoji: "🐉", desc: "هر بار که می‌میری، حیوان تازه‌ای می‌شدی؛ مترویدوانیای ۸ بیتی." },
+  { id: "phantasy-star", name: "فانتزی استار", nameEn: "PHANTASY STAR", platform: "sms", year: 1987, genre: "نقش‌آفرینی", emoji: "🪐", desc: "آلیس و انتقامش در منظومه‌ی آلگول؛ جدّ همه‌ی RPGهای سگا.", note: "نخستین RPG کنسولی با سیاه‌چال‌های سه‌بعدیِ اول‌شخص." },
+  { id: "r-type-sms", name: "آر-تایپ", nameEn: "R-TYPE", platform: "sms", year: 1988, genre: "شوتر", emoji: "🚀", desc: "سفینه‌ی R-9 و گویِ Force؛ شوتری که صبر را تمرین می‌داد." },
+  { id: "ghost-house", name: "خانه‌ی ارواح", nameEn: "GHOST HOUSE", platform: "sms", year: 1986, genre: "پلتفرمر", emoji: "👻", desc: "میکی در عمارت خون‌آشام؛ چراغ‌ها را روشن کن و درها را بکوب.", note: "یکی از اولین انحصاری‌های مستر سیستم؛ شمعدان‌هایش معروف‌اند." },
+  { id: "aztec-adventure", name: "ماجراجویی آزتک", nameEn: "AZTEC ADVENTURE", platform: "sms", year: 1987, genre: "اکشن", emoji: "🗿", desc: "نینی در معبد آزتک؛ سکوهایی که از نمای بالا گول می‌زدند." },
+
+  /* ── مگا درایو؛ موج دوم شاهکارهای سگا ── */
+  { id: "streets-of-rage", name: "شورش در شهر", nameEn: "STREETS OF RAGE", platform: "megadrive", year: 1991, genre: "اکشن", emoji: "🥊", desc: "اکسل، بلیز و آدام در خیابان‌های فاسد؛ شروع سه‌گانه‌ای که گیم‌نت‌های ایران را ساخت.", note: "پاسخ سگا به فاینال فایت؛ موسیقی‌اش زیر پای هر دعوایی بود." },
+  { id: "streets-of-rage-2", name: "شورش در شهر ۲", nameEn: "STREETS OF RAGE II", platform: "megadrive", year: 1992, genre: "اکشن", emoji: "🥊", desc: "اسکیت و مکس آمدند؛ بسیاری هنوز آن را بهترین بزن‌بهادرِ تاریخ می‌دانند.", note: "موسیقی الکترونیک یوزو کوشیرو در ۱۹۹۲ از موسیقی کلاب‌های زمانش جلوتر بود." },
+  { id: "streets-of-rage-3", name: "شورش در شهر ۳", nameEn: "STREETS OF RAGE III", platform: "megadrive", year: 1994, genre: "اکشن", emoji: "🥊", desc: "رباتها، کانگوروی مشت‌زن و پایان‌های چندگانه؛ خداحافظیِ پرآتش سه‌گانه." },
+  { id: "golden-axe-2", name: "تبر طلایی ۲", nameEn: "GOLDEN AXE II", platform: "megadrive", year: 1991, genre: "اکشن", emoji: "🪓", desc: "بازگشت بربر و آمازون؛ جادوی آبی و اژدهای سبز، یک‌بار دیگر." },
+  { id: "golden-axe-3", name: "تبر طلایی ۳", nameEn: "GOLDEN AXE III", platform: "megadrive", year: 1993, genre: "اکشن", emoji: "🪓", desc: "مسیرهای شعبه‌شده و قهرمانان تازه؛ ژاپن دید و جهان سال‌ها بعد.", note: "در غرب فقط از راه سگا چنل پخش شد؛ نسخه‌ی ژاپنی‌اش گنجینه‌ی کلکسیونرهاست." },
+  { id: "revenge-of-shinobi", name: "انتقام شینوبی", nameEn: "THE REVENGE OF SHINOBI", platform: "megadrive", year: 1989, genre: "اکشن", emoji: "🥷", desc: "جو موساشی در برابر نئو-زید؛ شوریکن‌هایی که با موسیقی کوشیرو پرتاب می‌شدند.", note: "باس‌هایش تقلید شخصیت‌های معروف بود؛ سگا بعدها مجبور شد چندتایش را عوض کند." },
+  { id: "comix-zone", name: "منطقه‌ی کمیک", nameEn: "COMIX ZONE", platform: "megadrive", year: 1995, genre: "اکشن", emoji: "💥", desc: "ترنر داخل کمیکِ خودش گیر کرد؛ هر پنل، یک مرحله‌ی جنگ.", note: "حرف‌زدنِ شخصیت‌ها با حبابِ گفتار؛ در ۱۹۹۵ از خیلی چیزها جلوتر بود." },
+  { id: "ristar", name: "ریستار", nameEn: "RISTAR", platform: "megadrive", year: 1995, genre: "پلتفرمر", emoji: "⭐", desc: "ستاره‌ای که با دست‌های کشسانش از کهکشان آویزان می‌شد؛ دیر آمد و ماندگار شد." },
+  { id: "earthworm-jim", name: "جیم کرم خاکی", nameEn: "EARTHWORM JIM", platform: "megadrive", year: 1994, genre: "پلتفرمر", emoji: "🪱", desc: "کرم خاکی در لباس فضایی؛ شوخی‌ای که از هر کارتونِ زمانش بامزه‌تر بود.", note: "مرحله‌ی «گاوها با شتاب می‌افتند» از مشهورترین لحظه‌های تاریخ بازی است." },
+  { id: "gunstar-heroes", name: "قهرمانان گان‌استار", nameEn: "GUNSTAR HEROES", platform: "megadrive", year: 1993, genre: "شوتر", emoji: "🔫", desc: "اولین ساخته‌ی استودیوی ترژر؛ تفنگ‌های ترکیبی و انفجارِ بی‌وقفه.", note: "دونفره‌ی همکاری‌اش استانداردِ اکشنِ دونفره شد؛ هنوز هم بازی می‌شود." },
+  { id: "kid-chameleon", name: "کید آفتاب‌پرست", nameEn: "KID CHAMELEON", platform: "megadrive", year: 1992, genre: "پلتفرمر", emoji: "🦎", desc: "کلاه‌خودی که ده شخصیت می‌شد؛ صد مرحله و هیچ ذخیره‌ای؛ شجاعتِ خالص." },
+  { id: "columns-md", name: "ستون‌ها", nameEn: "COLUMNS", platform: "megadrive", year: 1990, genre: "معمایی", emoji: "💎", desc: "جواهرهایی که سه‌تا سه‌تا می‌درخشیدند؛ جواب سگا به تتریس.", note: "بازیِ همراهِ خیلی از مگا درایوها؛ ملودی‌اش را همه می‌شناسند." },
+  { id: "mean-bean", name: "ماشین لوبیای دکتر رباتنیک", nameEn: "DR. ROBOTNIK'S MEAN BEAN MACHINE", platform: "megadrive", year: 1993, genre: "معمایی", emoji: "🫘", desc: "لوبیاهای رنگیِ پازلی با صورت‌های خندان دشمن؛ پویو برای غربی‌ها." },
+  { id: "shining-force-2", name: "شینینگ فورس ۲", nameEn: "SHINING FORCE II", platform: "megadrive", year: 1993, genre: "نقش‌آفرینی", emoji: "⚔️", desc: "جنگ‌های شطرنجی با شمشیر و جادو؛ استراتژیِ نوبتیِ خوش‌دستِ سگا." },
+  { id: "landstalker", name: "لنداستالکر", nameEn: "LANDSTALKER", platform: "megadrive", year: 1992, genre: "ماجراجویی", emoji: "🗺️", desc: "نایجل و پریِ کوچک در جزیره‌ی گنج؛ ایزومتریکِ ماجراجویانه.", note: "پرش‌های ایزومتریک‌اش بازیکن را دیوانه می‌کرد؛ ولی شهرهایش زنده بود." },
+  { id: "toejam-earl", name: "توجَم و ارل", nameEn: "TOEJAM & EARL", platform: "megadrive", year: 1991, genre: "ماجراجویی", emoji: "🎷", desc: "دو فضاییِ فانک دنبال تکه‌های سفینه؛ دونفره‌ای که نقشه نداشت!", note: "موسیقی فانکش هنوز سمپل می‌شود؛ کفش‌های موشکی‌اش افسانه‌اند." },
+  { id: "eternal-champions", name: "قهرمانان ابدی", nameEn: "ETERNAL CHAMPIONS", platform: "megadrive", year: 1993, genre: "مبارزه‌ای", emoji: "🏛️", desc: "مبارزانی که قبل از مرگشان ربوده شدند تا دوباره بجنگند؛ خشونتِ سینمایی.", note: "پایان‌های «سینمایی‌مرگ» هر شخصیت، تماشاچی جمع می‌کرد." },
+  { id: "contra-hard-corps", name: "کنترا: هارد کورپس", nameEn: "CONTRA: HARD CORPS", platform: "megadrive", year: 1994, genre: "شوتر", emoji: "🪖", desc: "کنترا با ربات و گرگینه؛ پایان‌های چندگانه و انتخاب مسیر." },
+  { id: "castlevania-bloodlines", name: "کسلوانیا: خون‌بها", nameEn: "CASTLEVANIA: BLOODLINES", platform: "megadrive", year: 1994, genre: "اکشن", emoji: "🧛", desc: "شلاقِ کونامی روی سگا؛ دو شکارچی، اروپای جنگ‌زده و خون‌آشام‌ها." },
+  { id: "battletoads-md", name: "بتل‌تودز", nameEn: "BATTLETOADS", platform: "megadrive", year: 1993, genre: "اکشن", emoji: "🐸", desc: "وزغ‌های خشمگین با مشت‌های غول‌پیکر؛ سختی‌ای که دوستش داشتیم.", note: "مرحله‌ی Turbo Tunnel از معروف‌ترین مرحله‌های سختِ تاریخ است." },
+  { id: "rocket-knight", name: "راکت نایت ادونچرز", nameEn: "ROCKET KNIGHT ADVENTURES", platform: "megadrive", year: 1993, genre: "پلتفرمر", emoji: "🚀", desc: "صاری‌ای با راکت‌پشتی؛ شوالیه‌ای که روی ریل می‌دوید." },
+  { id: "alien-soldier", name: "الین سولجر", nameEn: "ALIEN SOLDIER", platform: "megadrive", year: 1995, genre: "اکشن", emoji: "👽", desc: "باز هم ترژر؛ از ثانیه‌ی اول بوس‌راش، بی‌وقفه تا آخر.", note: "در ژاپن و اروپا روی کارتریج آمد؛ آمریکایی‌ها سال‌ها حسرتش را خوردند." },
+  { id: "thunder-force-4", name: "تاندرفورس ۴", nameEn: "THUNDER FORCE IV", platform: "megadrive", year: 1992, genre: "شوتر", emoji: "⚡", desc: "طوفانِ فضایی؛ شوتری که مگا درایو را تا مرز توانش می‌راند." },
+  { id: "virtua-racing", name: "ویرچوا ریسینگ", nameEn: "VIRTUA RACING", platform: "megadrive", year: 1993, genre: "مسابقه‌ای", emoji: "🏎️", desc: "اولین بازی پلی‌گانِ سه‌بعدیِ خانگی؛ فرمول یکِ سگا روی کارتریج.", note: "تراشه‌ی SVP داخل کارتریج بود؛ قیمتش دو برابر بازی‌های معمولی بود." },
+  { id: "sparkster", name: "اسپارکستر", nameEn: "SPARKSTER", platform: "megadrive", year: 1994, genre: "پلتفرمر", emoji: "✨", desc: "اپوسومی با شمشیر و راکت؛ سرعتی که چشم را جا می‌گذاشت." },
+  { id: "bonanza-bros", name: "بونانزا بروز", nameEn: "BONANZA BROS.", platform: "megadrive", year: 1991, genre: "اکشن", emoji: "💰", desc: "دو دزدِ دست‌وپا‌چلفتی که پشت مبل‌ها قایم می‌شدند؛ دونفره‌ی خنده‌دار." },
+  { id: "shadow-dancer", name: "شدو دنسر", nameEn: "SHADOW DANCER", platform: "megadrive", year: 1990, genre: "اکشن", emoji: "🌑", desc: "شینوبی و سگِ سفیدش؛ سایه‌ها و شوریکن‌ها در شهر نئون.", note: "سگش «یاماتو» خودش یک سلاح بود؛ حمله‌ی شیرجه‌اش معروف است." },
+  { id: "gain-ground", name: "گین‌گراند", nameEn: "GAIN GROUND", platform: "megadrive", year: 1990, genre: "استراتژی", emoji: "🏹", desc: "هر مرحله، سه قهرمان و یک فکر؛ ترکیبِ عجیبِ استراتژی و اکشنِ سگا." },
+  { id: "mega-man-wily", name: "مگامن: جنگ‌های وایلی", nameEn: "MEGA MAN: THE WILY WARS", platform: "megadrive", year: 1994, genre: "پلتفرمر", emoji: "⚙️", desc: "سه مگامنِ کلاسیک در یک کارتریج؛ کپ‌کام روی زمینِ سگا.", note: "در آمریکا فقط به مشترکان سگا چنل رسید؛ کمیاب‌ترین مگامنِ فیزیکی." },
+  { id: "beyond-oasis", name: "فراسوی اوآسیس", nameEn: "BEYOND OASIS", platform: "megadrive", year: 1994, genre: "نقش‌آفرینی", emoji: "🌴", desc: "انگشتری که جن‌ها را صدا می‌زد؛ زلدایِ سگا که کسی جدی‌اش نگرفت.", note: "اروپایی‌ها با نام The Story of Thor می‌شناسندش؛ گرافیکش هنوز چشم‌نواز است." },
+  { id: "dune-2-md", name: "دیون ۲", nameEn: "DUNE II", platform: "megadrive", year: 1993, genre: "استراتژی", emoji: "🏜️", desc: "ادویه باید جریان یابد؛ پدرِ استراتژیِ هم‌زمان روی کنسول." },
+  { id: "sonic-spinball", name: "سونیک اسپین‌بال", nameEn: "SONIC SPINBALL", platform: "megadrive", year: 1993, genre: "اکشن", emoji: "🎱", desc: "سونیک خودش توپِ پین‌بال شد؛ عجیب، سخت و وسوسه‌کننده." },
+
+  /* ── آرکیدهای سگا ── */
+  { id: "space-harrier", name: "اسپیس هاریر", nameEn: "SPACE HARRIER", platform: "arcade", year: 1985, genre: "شوتر", emoji: "🛩️", desc: "مردی که روی موشک می‌دوید؛ اولین شگفتیِ «سوپر اسکیلر» سگا.", note: "افکتِ پرسپکتیوش بدون هیچ سخت‌افزار سه‌بعدی‌ای ساخته شده بود." },
+  { id: "hang-on", name: "هنگ‌آن", nameEn: "HANG-ON", platform: "arcade", year: 1985, genre: "مسابقه‌ای", emoji: "🏍️", desc: "کابینتی که خودِ موتور بود؛ باید روی پیچ‌ها کج می‌شدی.", note: "اولین کابینتِ حرکتیِ تمام‌عیار؛ صفش از درِ گیم‌نت بیرون می‌زد." },
+  { id: "after-burner-2", name: "افتر برنر ۲", nameEn: "AFTER BURNER II", platform: "arcade", year: 1987, genre: "شوتر", emoji: "✈️", desc: "F-14 و آسمانی پر از موشک؛ کابینتِ چرخانِ سرگیجه‌آور.", note: "نسخه‌ی کابینت، خلبان را با صندلی می‌چرخاند؛ گران‌ترین تجربه‌ی آرکید زمانش." },
+  { id: "daytona-usa", name: "دیتونا یو‌اس‌ای", nameEn: "DAYTONA USA", platform: "arcade", year: 1994, genre: "مسابقه‌ای", emoji: "🚥", desc: "«LET'S GO AWAY!» و استارتِ غلتان؛ ستونِ گیم‌نت‌های ایران در دهه‌ی هفتاد.", note: "آهنگش را یوزو کوشیرو ننوشت اما همه زیر لب خواندندش؛ هشت‌نفره‌ی لینک‌شده‌اش افسانه بود." },
+  { id: "sega-rally", name: "سگا رالی", nameEn: "SEGA RALLY CHAMPIONSHIP", platform: "arcade", year: 1995, genre: "مسابقه‌ای", emoji: "🚙", desc: "خاک، گِل و دریفت؛ فیزیکِ رالی‌اش هنوز الگوی بازی‌های ماشین است.", note: "سلوپِ خاک زیرِ چرخ‌ها را ۱۹۹۵ شبیه‌سازی کرد؛ منتقدها هنوز تعریفش می‌کنند." },
+  { id: "super-monaco-gp", name: "سوپر موناکو جی‌پی", nameEn: "SUPER MONACO GP", platform: "arcade", year: 1989, genre: "مسابقه‌ای", emoji: "🏆", desc: "فرمول یک در تونل موناکو؛ آیرتون سنا مشاورش بود.", note: "نسخه‌ی خانگی‌اش را خودِ سنا تنظیم کرد؛ جایزه‌ی بردنش هم مسابقه با سنا بود." },
+  { id: "virtua-cop", name: "ویرچوا کاپ", nameEn: "VIRTUA COP", platform: "arcade", year: 1994, genre: "شوتر", emoji: "🚓", desc: "تفنگِ نوری و «عدالتِ» سریع؛ پلیس‌بازیِ رسمیِ گیم‌نت‌ها.", note: "ژستِ خشاب‌گذاشتنِ تفنگش را همه‌ی بچه‌ها تقلید می‌کردند." },
+  { id: "alien-syndrome", name: "الین سیندروم", nameEn: "ALIEN SYNDROME", platform: "arcade", year: 1987, genre: "شوتر", emoji: "🧬", desc: "نجاتِ گروگان‌ها پیش از انفجار سفینه؛ دونفره‌ی پُراسترسِ سگا.", note: "شمارش معکوسِ هر مرحله، ضربان را به صدای بازی وصل می‌کرد." },
+  { id: "super-hang-on", name: "سوپر هنگ‌آن", nameEn: "SUPER HANG-ON", platform: "arcade", year: 1987, genre: "مسابقه‌ای", emoji: "🛣️", desc: "موتورِ سگا با توربو؛ مسیرهای شعبه‌شده و سرعتِ جنون.", note: "در گینس به‌عنوان یکی از بازی‌های پرفروش آرکیدِ ژاپن ثبت شده." },
+  { id: "power-drift", name: "پاور دریفت", nameEn: "POWER DRIFT", platform: "arcade", year: 1988, genre: "مسابقه‌ای", emoji: "🎢", desc: "پیست‌های ترن‌هواییِ معلق؛ اسپرایت‌های سگا در اوجِ نمایش.", note: "کابینتِ تکانش طوری بود که خیلی‌ها فقط برای سواری‌اش سکه می‌انداختند." },
 ];
 
 /* ---------- ابزار جستجو ---------- */
