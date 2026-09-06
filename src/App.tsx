@@ -23,6 +23,7 @@ import {
   StarBurst,
   TicketIcon,
 } from "./icons";
+import { GAMES, type Game } from "./games";
 import {
   useCountUp,
   useHashItem,
@@ -35,8 +36,10 @@ import {
   BackToTop,
   DiceIcon,
   FavoritesDrawer,
+  GamesHallView,
   Guestbook,
   IntroOverlay,
+  GameModal,
   ItemCard,
   ItemModal,
   LegendaryStrip,
@@ -236,6 +239,7 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>({ t: "home" });
   const [navList, setNavList] = useState<Item[]>(ITEMS);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [gameModal, setGameModal] = useState<Game | null>(null);
   const [favs, setFavs] = useLocalStorage<string[]>("sf-favs", []);
   const [soundOn, setSoundOn] = useLocalStorage<boolean>("sf-sound", true);
   const { click, thunk } = useMuseumSound(soundOn);
@@ -351,7 +355,14 @@ const App: React.FC = () => {
             </button>
           </nav>
           <div className="min-w-0 flex-1 sm:ms-auto sm:max-w-xs lg:max-w-sm">
-            <SearchBox size="sm" onOpen={(i) => openItem(i, searchList(i))} />
+            <SearchBox
+              size="sm"
+              onOpen={(i) => openItem(i, searchList(i))}
+              onOpenGame={(g) => {
+                click();
+                setGameModal(g);
+              }}
+            />
           </div>
           <button
             onClick={randomTicket}
@@ -391,7 +402,15 @@ const App: React.FC = () => {
         <ScrollProgress />
       </header>
 
-      {view.t === "cat" ? (
+      {view.t === "cat" && view.id === "games" ? (
+        <GamesHallView
+          onBack={() => {
+            setView({ t: "home" });
+            window.scrollTo(0, 0);
+          }}
+          onOpenItem={(i) => openItem(i)}
+        />
+      ) : view.t === "cat" ? (
         <CategoryView
           cat={catById(view.id)}
           favs={favs}
@@ -448,7 +467,13 @@ const App: React.FC = () => {
               </Reveal>
 
               <Reveal delay={180} className="mt-8">
-                <SearchBox onOpen={(i) => openItem(i, searchList(i))} />
+                <SearchBox
+                  onOpen={(i) => openItem(i, searchList(i))}
+                  onOpenGame={(g) => {
+                    click();
+                    setGameModal(g);
+                  }}
+                />
                 <p className="mt-2.5 text-[11px] text-ink-3">
                   {toFa(ITEMS.length)} پرونده در گنجینه · نام شی، دسته یا توضیحش را جستجو کنید
                 </p>
@@ -501,7 +526,7 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {CATEGORIES.map((c, idx) => {
                 const Icon = CATEGORY_ICONS[c.icon];
-                const count = ITEMS.filter((i) => i.category === c.id).length;
+                const count = c.id === "games" ? GAMES.length : ITEMS.filter((i) => i.category === c.id).length;
                 return (
                   <Reveal key={c.id} delay={(idx % 4) * 80}>
                     <button
@@ -718,6 +743,19 @@ const App: React.FC = () => {
           onGotoCat={(id) => {
             setHash(null);
             openCat(id);
+          }}
+        />
+      )}
+
+      {gameModal && (
+        <GameModal
+          game={gameModal}
+          list={GAMES}
+          onClose={() => setGameModal(null)}
+          onNav={(g) => setGameModal(g)}
+          onOpenItem={(i) => {
+            setGameModal(null);
+            openItem(i);
           }}
         />
       )}

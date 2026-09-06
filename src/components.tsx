@@ -18,7 +18,25 @@ import {
   triviaOf,
   type Item,
 } from "./data";
-import { DECADES, GROUPS, NOSTALGIA, type DecadeId, type NostalgiaGroup } from "./nostalgia";
+import {
+  DECADES,
+  GROUP_EMOJI,
+  GROUP_LABEL,
+  NOSTALGIA,
+  type DecadeId,
+  type NostGroup,
+  type NostalgiaItem,
+} from "./nostalgia";
+import {
+  CONSOLE_ITEM,
+  GAMES,
+  GENRES,
+  PLATFORMS,
+  platformOf,
+  searchGames,
+  type Game,
+  type PlatformId,
+} from "./games";
 import {
   ArrowNext,
   ArrowPrev,
@@ -200,12 +218,17 @@ const Hi: React.FC<{ text: string; q: string }> = ({ text, q }) => {
   );
 };
 
-export const SearchBox: React.FC<{ size?: "lg" | "sm"; onOpen: (i: Item) => void }> = ({ size = "lg", onOpen }) => {
+export const SearchBox: React.FC<{
+  size?: "lg" | "sm";
+  onOpen: (i: Item) => void;
+  onOpenGame?: (g: Game) => void;
+}> = ({ size = "lg", onOpen, onOpenGame }) => {
   const [q, setQ] = useState("");
   const [focus, setFocus] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const results = useMemo(() => searchItems(q).slice(0, 8), [q]);
+  const gameResults = useMemo(() => (onOpenGame ? searchGames(q).slice(0, 3) : []), [q, onOpenGame]);
   const open = focus && q.trim().length > 0;
 
   useEffect(() => {
@@ -236,6 +259,46 @@ export const SearchBox: React.FC<{ size?: "lg" | "sm"; onOpen: (i: Item) => void
     setQ("");
     inputRef.current?.blur();
   };
+
+  const pickGame = (g: Game) => {
+    onOpenGame?.(g);
+    setFocus(false);
+    setQ("");
+    inputRef.current?.blur();
+  };
+
+  const gameRow = (g: Game) => {
+    const p = platformOf(g.platform);
+    return (
+      <button
+        key={`g-${g.id}`}
+        onClick={() => pickGame(g)}
+        className="flex w-full items-center gap-3 px-4 py-2.5 text-right transition-colors hover:bg-gold/15"
+      >
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line-2 bg-espresso text-lg">
+          {g.emoji}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[14px] font-bold text-ink">
+            <Hi text={g.name} q={q} />
+          </span>
+          <span className="block text-[11px] text-ink-3">
+            🕹️ گنجینه‌ی بازی‌ها · {p.fa} · {toFa(g.year)}
+          </span>
+        </span>
+        <ArrowNext className="h-3.5 w-3.5 shrink-0 text-gold-3" />
+      </button>
+    );
+  };
+
+  const gameBlock = onOpenGame && gameResults.length > 0 && (
+    <>
+      <p className="border-t border-line bg-paper-3/50 px-4 py-1.5 text-[10px] font-bold tracking-wider text-gold-3">
+        از گنجینه‌ی بازی‌ها
+      </p>
+      {gameResults.map(gameRow)}
+    </>
+  );
 
   const row = (i: Item) => (
     <button
@@ -277,9 +340,9 @@ export const SearchBox: React.FC<{ size?: "lg" | "sm"; onOpen: (i: Item) => void
         </div>
         {open && (
           <div className="fade-in absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-line-2 bg-cream shadow-[0_24px_50px_-20px_rgba(43,32,20,0.5)]">
-            {results.length ? (
-              results.map(row)
-            ) : (
+            {results.map(row)}
+            {gameBlock}
+            {!results.length && !gameResults.length && (
               <p className="px-4 py-5 text-center text-[13px] text-ink-3">چیزی با این نام در گنجینه نیست…</p>
             )}
           </div>
@@ -307,21 +370,20 @@ export const SearchBox: React.FC<{ size?: "lg" | "sm"; onOpen: (i: Item) => void
         </span>
       </div>
       {open && (
-        <div className="fade-in absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-line-2 bg-cream shadow-[0_28px_60px_-22px_rgba(43,32,20,0.55)]">
-          {results.length ? (
-            <>
-              <div className="divide-y divide-dashed divide-line">{results.map(row)}</div>
+          <div className="fade-in absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-line-2 bg-cream shadow-[0_28px_60px_-22px_rgba(43,32,20,0.55)]">
+            {results.length > 0 && <div className="divide-y divide-dashed divide-line">{results.map(row)}</div>}
+            {gameBlock}
+            {results.length > 0 && (
               <p className="border-t border-line bg-paper-2/60 px-4 py-2 text-[11px] text-ink-3">
-                {toFa(results.length)} نتیجه · برای پرونده‌ی کامل کلیک کنید
+                {toFa(results.length)} پرونده · برای جزییات کامل کلیک کنید
               </p>
-            </>
-          ) : (
-            <p className="px-4 py-6 text-center text-[13px] text-ink-3">
-              چیزی با این نام در گنجینه نیست؛ شاید هنوز کسی اهدایش نکرده…
-            </p>
-          )}
-        </div>
-      )}
+            )}
+            {!results.length && !gameResults.length && (
+              <p className="px-4 py-6 text-center text-[13px] text-ink-3">
+                چیزی با این نام در گنجینه نیست؛ شاید هنوز کسی اهدایش نکرده…
+              </p>
+            )}
+          </div>      )}
     </div>
   );
 };
@@ -1084,14 +1146,14 @@ export const ItemModal: React.FC<{
 
         <div className="grid md:grid-cols-[300px_1fr]">
           {/* لوح نمایش */}
-          <aside className="dark-panel relative flex flex-col items-center justify-center gap-4 overflow-hidden p-8 text-center md:min-h-[520px]">
+          <aside className="dark-panel relative flex flex-col items-center justify-center gap-4 overflow-hidden p-8 text-center md:min-h-[560px]">
             <div className="beam lamp-glow pointer-events-none absolute inset-0" aria-hidden />
             <div className="scanlines pointer-events-none absolute inset-0 opacity-40" aria-hidden />
             <span className="font-type relative text-[10px] tracking-[0.3em] text-gold-2/80" dir="ltr">
               EXHIBIT № {plaqueNo(idx + 1)}
             </span>
-            <span className="relative grid h-40 w-40 place-items-center overflow-hidden rounded-full border-4 border-double border-gold/40 bg-espresso-2 shadow-[0_24px_50px_-18px_rgba(0,0,0,0.8)]">
-              <span className="animate-bob text-7xl leading-none emoji-aged">{item.image}</span>
+            <span className="relative grid h-52 w-52 place-items-center overflow-hidden rounded-full border-4 border-double border-gold/40 bg-espresso-2 shadow-[0_24px_50px_-18px_rgba(0,0,0,0.8)] sm:h-60 sm:w-60">
+              <span className="animate-bob text-8xl leading-none emoji-aged sm:text-9xl">{item.image}</span>
               <ItemPhoto item={item} className={PHOTO_OVERLAY} />
             </span>
             <span key={`st-${item.id}`} className="stamp stamp-in relative !text-[13px]" style={{ color: "#e8c07a" }}>
@@ -1552,37 +1614,270 @@ export const IntroOverlay: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   );
 };
 
+/* ─────────────────────── عکس واقعی خاطره‌ها ─────────────────────── */
+
+type WikiQuery = { q: string; lang: "fa" | "en" };
+const WIKI_MEM = new Map<string, string | null>();
+
+async function fetchWikiThumb(queries: WikiQuery[]): Promise<string | null> {
+  const key = queries.map((x) => `${x.lang}:${x.q}`).join("|");
+  if (WIKI_MEM.has(key)) return WIKI_MEM.get(key) ?? null;
+  let url: string | null = null;
+  try {
+    const ck = `sf-wiki:${key.slice(0, 70)}`;
+    const cached = sessionStorage.getItem(ck);
+    if (cached) {
+      url = cached === "0" ? null : cached;
+    } else {
+      for (const { q, lang } of queries) {
+        try {
+          const r = await fetch(
+            `https://${lang}.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=1&namespace=0&format=json&origin=*`
+          );
+          if (!r.ok) continue;
+          const j = await r.json();
+          const title = j?.[1]?.[0] as string | undefined;
+          if (!title) continue;
+          const r2 = await fetch(
+            `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+          );
+          if (!r2.ok) continue;
+          const s = await r2.json();
+          const u = (s?.thumbnail?.source ?? s?.originalimage?.source) as string | undefined;
+          if (u) {
+            url = u;
+            break;
+          }
+        } catch {
+          /* پرس‌وجوی بعدی */
+        }
+      }
+      try {
+        sessionStorage.setItem(ck, url ?? "0");
+      } catch {
+        /* بی‌خیال */
+      }
+    }
+  } catch {
+    url = null;
+  }
+  WIKI_MEM.set(key, url);
+  return url;
+}
+
+const NostalgiaPhoto: React.FC<{ n: NostalgiaItem; className?: string }> = ({ n, className = "" }) => {
+  const linked = n.itemRef ? ITEMS.find((i) => i.id === n.itemRef) : undefined;
+  const [src, setSrc] = useState<string | null>(null);
+  const { ref, inView } = useInView<HTMLSpanElement>(0.05);
+  useEffect(() => {
+    if (linked || !inView || !n.photo) return;
+    let live = true;
+    fetchWikiThumb([
+      { q: n.photo, lang: "en" },
+      { q: n.title, lang: "fa" },
+    ]).then((u) => live && setSrc(u));
+    return () => {
+      live = false;
+    };
+  }, [inView, linked, n]);
+  if (linked) return <ItemPhoto item={linked} className={className} />;
+  return (
+    <span ref={ref} className={className} aria-hidden>
+      {src && (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="photo-aged h-full w-full rounded-[inherit] object-cover"
+        />
+      )}
+    </span>
+  );
+};
+
+const PHOTO_FADE = "absolute inset-0 opacity-0 transition-opacity duration-700 has-[img]:opacity-100";
+
+/* ─────────────────────── مودال خاطره ─────────────────────── */
+
+type NostItem = NostalgiaItem & { decade: DecadeId };
+
+const NostalgiaModal: React.FC<{ n: NostItem; list: NostItem[]; onClose: () => void; onNav: (n: NostItem) => void }> = ({
+  n,
+  list,
+  onClose,
+  onNav,
+}) => {
+  const idx = Math.max(0, list.findIndex((x) => x.id === n.id));
+  const prev = idx > 0 ? list[idx - 1] : null;
+  const next = idx < list.length - 1 ? list[idx + 1] : null;
+  const meta = DECADES.find((d) => d.id === n.decade)!;
+  const shelfmates = NOSTALGIA.filter((x) => x.group === n.group && x.id !== n.id).slice(0, 4);
+
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && next) onNav(next);
+      if (e.key === "ArrowRight" && prev) onNav(prev);
+    };
+    window.addEventListener("keydown", fn);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", fn);
+      document.body.style.overflow = "";
+    };
+  }, [onClose, onNav, next, prev]);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6">
+      <div className="fade-in absolute inset-0 bg-espresso/75 backdrop-blur-[3px]" onClick={onClose} aria-hidden />
+      <div
+        key={n.id}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`خاطره‌ی ${n.title}`}
+        className="modal-panel aged-card relative max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl"
+      >
+        <button
+          onClick={onClose}
+          aria-label="بستن خاطره"
+          className="absolute left-3.5 top-3.5 z-20 grid h-9 w-9 place-items-center rounded-full border border-line-2 bg-cream/90 text-ink-2 transition-all hover:rotate-90 hover:border-sienna hover:text-sienna active:scale-90"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+
+        {/* قاب عکس خاطره */}
+        <div className="relative h-60 overflow-hidden border-b border-dashed border-line-2 sm:h-72">
+          <span className="absolute inset-0 grid place-items-center text-[92px] emoji-aged">{n.emoji}</span>
+          <span className="sunburst absolute inset-0" aria-hidden />
+          <span className="scanlines absolute inset-0 opacity-25" aria-hidden />
+          <NostalgiaPhoto n={n} className={PHOTO_FADE} />
+          <span className="font-type absolute bottom-3 right-4 rounded bg-espresso/85 px-2.5 py-1 text-[10px] tracking-[0.25em] text-gold-2" dir="ltr">
+            {meta.range}
+          </span>
+          <span className="stamp absolute bottom-3 left-4 !text-[11px]" style={{ color: "#8a4b26" }}>
+            {GROUP_LABEL[n.group]}
+          </span>
+        </div>
+
+        <div className="p-6 sm:p-8">
+          <h2 className="font-display text-4xl font-bold leading-tight text-ink sm:text-5xl">{n.title}</h2>
+          <p className="font-type mt-1 text-[11px] tracking-[0.25em] text-ink-3" dir="ltr">
+            {meta.id === "60" ? "1981–1990" : meta.id === "70" ? "1991–2000" : "2001–2010"} · MEMORY FILE
+          </p>
+
+          <p className="font-display mt-4 border-s-4 border-gold ps-4 text-2xl font-medium leading-[1.9] text-ink-2">
+            {n.text}
+          </p>
+          <p className="mt-4 text-[15px] leading-8 text-ink-2">{n.long}</p>
+
+          <div className="mt-6 flex flex-wrap gap-2">
+            <span className="rounded-full border border-line-2 bg-cream px-3 py-1 text-[12px] font-bold text-ink-2">
+              {GROUP_EMOJI[n.group]} {GROUP_LABEL[n.group]}
+            </span>
+            <span className="font-type rounded-full border border-line-2 bg-cream px-3 py-1 text-[12px] font-bold text-gold-3">
+              {n.year}
+            </span>
+            <span className="rounded-full border border-line-2 bg-cream px-3 py-1 text-[12px] font-bold text-sienna">
+              {meta.fa}
+            </span>
+          </div>
+
+          {shelfmates.length > 0 && (
+            <div className="mt-7">
+              <p className="text-[12px] font-bold text-ink-3">از همین قفسه:</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {shelfmates.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => onNav(s)}
+                    className="flex items-center gap-2 rounded-full border border-line-2 bg-cream/70 px-3 py-1.5 text-[12.5px] font-bold text-ink-2 transition-all hover:-translate-y-0.5 hover:border-sienna hover:text-sienna active:scale-95"
+                  >
+                    <span className="text-base">{s.emoji}</span>
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-7 flex items-center justify-between gap-3 border-t border-dashed border-line-2 pt-5">
+            {prev ? (
+              <button onClick={() => onNav(prev)} className="group flex min-w-0 items-center gap-2 text-right transition-colors hover:text-sienna">
+                <ArrowPrev className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                <span className="min-w-0">
+                  <span className="block text-[10px] text-ink-3">قبلی</span>
+                  <span className="block truncate text-[13px] font-bold">{prev.title}</span>
+                </span>
+              </button>
+            ) : (
+              <span />
+            )}
+            {next ? (
+              <button onClick={() => onNav(next)} className="group flex min-w-0 items-center gap-2 text-left transition-colors hover:text-sienna">
+                <span className="min-w-0">
+                  <span className="block text-left text-[10px] text-ink-3">بعدی</span>
+                  <span className="block truncate text-left text-[13px] font-bold">{next.title}</span>
+                </span>
+                <ArrowNext className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+              </button>
+            ) : (
+              <span />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ─────────────────────── اتاق خاطره‌ی دهه‌ها ─────────────────────── */
+
+const GROUP_IDS: NostGroup[] = ["tv", "play", "home", "school"];
 
 export const NostalgiaSection: React.FC = () => {
   const [dec, setDec] = useState<DecadeId>("60");
-  const [group, setGroup] = useState<"all" | NostalgiaGroup>("all");
+  const [group, setGroup] = useState<"all" | NostGroup>("all");
+  const [open, setOpen] = useState<NostItem | null>(null);
   const meta = DECADES.find((d) => d.id === dec)!;
   const items = NOSTALGIA.filter((n) => n.decade === dec && (group === "all" || n.group === group));
 
   return (
     <div>
       {/* تب‌های دهه */}
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        {DECADES.map((d) => (
-          <button
-            key={d.id}
-            onClick={() => setDec(d.id)}
-            aria-pressed={dec === d.id}
-            className={`font-display rounded-xl border-2 px-6 py-3 text-2xl font-bold transition-all duration-300 active:scale-95 sm:px-8 sm:text-3xl ${
-              dec === d.id
-                ? "-rotate-1 border-sienna bg-sienna text-cream shadow-[0_16px_32px_-12px_rgba(168,67,31,0.65)]"
-                : "border-line-2 bg-cream/70 text-ink-2 hover:-translate-y-1 hover:border-sienna hover:text-sienna"
-            }`}
-          >
-            {d.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-stretch justify-center gap-3">
+        {DECADES.map((d) => {
+          const count = NOSTALGIA.filter((n) => n.decade === d.id).length;
+          const active = dec === d.id;
+          return (
+            <button
+              key={d.id}
+              onClick={() => {
+                setDec(d.id);
+                setGroup("all");
+              }}
+              aria-pressed={active}
+              className={`min-w-36 rounded-xl border-2 px-5 py-3 text-center transition-all duration-300 active:scale-95 sm:px-8 ${
+                active
+                  ? "-rotate-1 border-sienna bg-sienna text-cream shadow-[0_16px_32px_-12px_rgba(168,67,31,0.65)]"
+                  : "border-line-2 bg-cream/70 text-ink-2 hover:-translate-y-1 hover:border-sienna hover:text-sienna"
+              }`}
+            >
+              <span className="font-display block text-2xl font-bold leading-8 sm:text-3xl">{d.fa}</span>
+              <span className={`block text-[11px] font-bold ${active ? "text-cream/85" : "text-ink-3"}`}>
+                {toFa(count)} خاطره
+              </span>
+            </button>
+          );
+        })}
       </div>
       <p key={`tag-${dec}`} className="rise-in mt-4 text-center text-[14px] text-ink-3">
-        <span className="font-type text-[11px] tracking-widest text-gold-3">{meta.years}</span>
+        <span className="font-type text-[11px] tracking-widest text-gold-3">{meta.range}</span>
         <span className="mx-2 text-line-2">·</span>
-        {meta.tagline}
+        {meta.tag}
       </p>
 
       {/* فیلتر قفسه‌ها */}
@@ -1597,20 +1892,20 @@ export const NostalgiaSection: React.FC = () => {
         >
           همه‌ی قفسه‌ها
         </button>
-        {GROUPS.map((g) => {
-          const active = group === g.id;
-          const count = NOSTALGIA.filter((n) => n.decade === dec && n.group === g.id).length;
+        {GROUP_IDS.map((gid) => {
+          const active = group === gid;
+          const count = NOSTALGIA.filter((n) => n.decade === dec && n.group === gid).length;
           return (
             <button
-              key={g.id}
-              onClick={() => setGroup(active ? "all" : g.id)}
+              key={gid}
+              onClick={() => setGroup(active ? "all" : gid)}
               className={`rounded-full border px-4 py-1.5 text-[13px] font-bold transition-all active:scale-95 ${
                 active
                   ? "border-gold-3 bg-gold-3 text-cream"
                   : "border-line-2 bg-cream/60 text-ink-2 hover:border-gold-3 hover:text-gold-3"
               }`}
             >
-              {g.fa} · {toFa(count)}
+              {GROUP_EMOJI[gid]} {GROUP_LABEL[gid]} · {toFa(count)}
             </button>
           );
         })}
@@ -1619,35 +1914,422 @@ export const NostalgiaSection: React.FC = () => {
       {/* کارت‌های خاطره */}
       <div key={`${dec}-${group}`} className="mt-9 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((n, i) => (
-          <div
-            key={n.id}
-            className={`rise-in aged-card group relative overflow-hidden rounded-xl p-5 transition-transform duration-300 hover:z-10 hover:-translate-y-1.5 hover:rotate-0 ${
-              i % 2 ? "rotate-[0.7deg]" : "-rotate-[0.7deg]"
-            }`}
-            style={{ animationDelay: `${i * 45}ms` }}
-          >
-            <span className="tape" aria-hidden />
-            <div className="flex items-start justify-between">
-              <span className="text-4xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
-                {n.emoji}
+          <div key={n.id} className={i % 2 ? "rotate-[0.7deg]" : "-rotate-[0.7deg]"}>
+            <button
+              onClick={() => setOpen(n)}
+              className="rise-in aged-card group relative block w-full cursor-pointer overflow-hidden rounded-xl text-left transition-all duration-300 hover:-translate-y-1.5 hover:rotate-0 hover:shadow-[0_26px_48px_-20px_rgba(43,32,20,0.6)] active:scale-[0.98]"
+              style={{ animationDelay: `${(i % 8) * 55}ms` }}
+              aria-label={`جزئیات ${n.title}`}
+            >
+              <span className="tape" aria-hidden />
+              <span className="relative block h-40 overflow-hidden border-b border-dashed border-line-2 bg-[radial-gradient(circle_at_50%_45%,#fdf6e2,#e7d3a6_85%)]">
+                <span className="sunburst absolute inset-0" aria-hidden />
+                <span className="absolute inset-0 grid place-items-center text-6xl emoji-aged transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-110">
+                  {n.emoji}
+                </span>
+                <NostalgiaPhoto n={n} className={PHOTO_FADE} />
+                <span className="font-type absolute bottom-2 right-2 rounded bg-espresso/85 px-2 py-0.5 text-[10px] font-bold tracking-widest text-gold-2">
+                  {n.year}
+                </span>
               </span>
-              <span className="font-type rounded border border-line-2 bg-cream/70 px-2 py-0.5 text-[11px] font-bold text-ink-2">
-                {n.year}
+              <span className="block p-4 text-right">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="font-display text-[23px] font-bold leading-8 text-ink transition-colors group-hover:text-sienna">
+                    {n.title}
+                  </span>
+                  <span className="shrink-0 text-xl">{GROUP_EMOJI[n.group]}</span>
+                </span>
+                <span className="mt-1 line-clamp-2 block text-[12.5px] leading-6 text-ink-2">{n.text}</span>
+                <span className="mt-3 flex items-center justify-between">
+                  <span className="rounded-full bg-ink/5 px-2.5 py-0.5 text-[10.5px] font-bold text-ink-3">
+                    {GROUP_LABEL[n.group]}
+                  </span>
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-gold-3 opacity-0 transition-all duration-300 group-hover:opacity-100">
+                    ورق بزن <ArrowNext className="h-3 w-3" />
+                  </span>
+                </span>
               </span>
-            </div>
-            <h3 className="font-display mt-3 text-2xl font-bold leading-8 text-ink transition-colors group-hover:text-sienna">
-              {n.title}
-            </h3>
-            <p className="mt-1.5 text-[12.5px] leading-6 text-ink-2">{n.text}</p>
-            <span className="mt-3 inline-block rounded-full bg-ink/5 px-2.5 py-0.5 text-[10.5px] font-bold text-ink-3">
-              {GROUPS.find((g) => g.id === n.group)!.fa}
-            </span>
+            </button>
           </div>
         ))}
       </div>
       <p className="mt-7 text-center text-[12px] text-ink-3">
-        چیزی از قلم افتاده؟ پایین‌تر در دفتر یادگاری بنویسید؛ نگهبان موزه می‌خواند.
+        روی هر کارت کلیک کنید تا پرونده‌ی خاطره باز شود · چیزی از قلم افتاده؟ در دفتر یادگاری بنویسید.
       </p>
+
+      {open && (
+        <NostalgiaModal n={open} list={items} onClose={() => setOpen(null)} onNav={(x) => setOpen(x)} />
+      )}
     </div>
+  );
+};
+
+/* ─────────────────────── تالار گنجینه‌ی بازی‌ها ─────────────────────── */
+
+export const GameModal: React.FC<{
+  game: Game;
+  list: Game[];
+  onClose: () => void;
+  onNav: (g: Game) => void;
+  onOpenItem: (i: Item) => void;
+}> = ({ game, list, onClose, onNav, onOpenItem }) => {
+  const idx = Math.max(0, list.findIndex((g) => g.id === game.id));
+  const prev = idx > 0 ? list[idx - 1] : null;
+  const next = idx < list.length - 1 ? list[idx + 1] : null;
+  const plat = platformOf(game.platform);
+  const consoleId = CONSOLE_ITEM[game.platform];
+  const consoleItem = consoleId ? ITEMS.find((i) => i.id === consoleId) : undefined;
+  const related = useMemo(
+    () =>
+      GAMES.filter((g) => g.platform === game.platform && g.id !== game.id)
+        .sort((a, b) => Math.abs(a.year - game.year) - Math.abs(b.year - game.year))
+        .slice(0, 4),
+    [game]
+  );
+
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && next) onNav(next);
+      if (e.key === "ArrowRight" && prev) onNav(prev);
+    };
+    window.addEventListener("keydown", fn);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", fn);
+      document.body.style.overflow = "";
+    };
+  }, [onClose, onNav, next, prev]);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6">
+      <div className="fade-in absolute inset-0 bg-espresso/80 backdrop-blur-[3px]" onClick={onClose} aria-hidden />
+      <div
+        key={game.id}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`پرونده‌ی بازی ${game.name}`}
+        className="modal-panel relative max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl dark-panel border border-gold/30 shadow-[0_40px_90px_-30px_rgba(0,0,0,0.8)]"
+      >
+        <button
+          onClick={onClose}
+          aria-label="بستن پرونده"
+          className="absolute left-3.5 top-3.5 z-20 grid h-9 w-9 place-items-center rounded-full border border-paper/25 bg-black/30 text-paper/85 transition-all hover:rotate-90 hover:border-gold-2 hover:text-gold-2 active:scale-90"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+
+        <div className="grid md:grid-cols-[280px_1fr]">
+          <aside
+            className="relative flex flex-col items-center justify-center gap-4 overflow-hidden p-8 text-center md:min-h-[430px]"
+            style={{ background: `linear-gradient(165deg, ${plat.c}55, rgba(24,17,10,0.95))` }}
+          >
+            <span className="cart-grooves" aria-hidden />
+            <span className="scanlines pointer-events-none absolute inset-0 opacity-30" aria-hidden />
+            <span className="font-type relative text-[10px] tracking-[0.3em] text-paper/60" dir="ltr">
+              GAME № {plaqueNo(idx + 1)}
+            </span>
+            <span className="animate-bob relative text-[88px] leading-none drop-shadow-[0_18px_30px_rgba(0,0,0,0.6)]">
+              {game.emoji}
+            </span>
+            <div className="relative grid w-full grid-cols-2 gap-2 text-paper/90">
+              <div className="rounded-lg border border-paper/15 bg-black/25 px-3 py-2.5">
+                <p className="text-[10px] text-paper/55">سال انتشار</p>
+                <p className="font-display text-2xl font-bold text-gold-2">{toFa(game.year)}</p>
+              </div>
+              <div className="rounded-lg border border-paper/15 bg-black/25 px-3 py-2.5">
+                <p className="text-[10px] text-paper/55">ژانر</p>
+                <p className="font-display text-lg font-bold leading-7 text-gold-2">{game.genre}</p>
+              </div>
+            </div>
+            {consoleItem && (
+              <button
+                onClick={() => onOpenItem(consoleItem)}
+                className="relative flex items-center gap-2 rounded-full border border-paper/30 px-4 py-2 text-[12.5px] font-bold text-paper/85 transition-all hover:border-gold-2 hover:text-gold-2 active:scale-95"
+              >
+                <span className="text-base">{consoleItem.image}</span>
+                پرونده‌ی کنسول: {consoleItem.name}
+              </button>
+            )}
+          </aside>
+
+          <div className="p-6 sm:p-8">
+            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11.5px] font-bold" style={{ borderColor: plat.c, color: "#e8d5ae", background: `${plat.c}33` }}>
+              <span className="h-2 w-2 rounded-full" style={{ background: plat.c }} />
+              {plat.fa}
+            </span>
+            <h2 className="font-display mt-3 text-4xl font-bold leading-tight text-paper sm:text-5xl">{game.name}</h2>
+            <p className="font-type mt-1 text-[11px] tracking-[0.3em] text-paper/50" dir="ltr">
+              {game.nameEn}
+            </p>
+            <p className="mt-5 text-[15px] leading-8 text-paper/85">{game.desc}</p>
+            {game.note && (
+              <div className="mt-5 rounded-xl border border-gold/40 bg-gold/10 p-4">
+                <p className="font-type text-[9px] tracking-[0.3em] text-gold-2" dir="ltr">
+                  DID YOU KNOW?
+                </p>
+                <p className="mt-1 text-[13.5px] leading-7 text-paper/85">{game.note}</p>
+              </div>
+            )}
+
+            <div className="mt-6">
+              <p className="text-[12px] font-bold text-paper/55">بازی‌های هم‌سکو:</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {related.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => onNav(r)}
+                    className="flex items-center gap-2 rounded-full border border-paper/20 bg-black/25 px-3 py-1.5 text-[12.5px] font-bold text-paper/80 transition-all hover:-translate-y-0.5 hover:border-gold-2 hover:text-gold-2 active:scale-95"
+                  >
+                    <span className="text-base">{r.emoji}</span>
+                    {r.name}
+                    <span className="font-type text-[10px] text-paper/45">{toFa(r.year)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-7 flex items-center justify-between gap-3 border-t border-dashed border-paper/20 pt-5">
+              {prev ? (
+                <button onClick={() => onNav(prev)} className="group flex min-w-0 items-center gap-2 text-right text-paper/85 transition-colors hover:text-gold-2">
+                  <ArrowPrev className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  <span className="min-w-0">
+                    <span className="block text-[10px] text-paper/50">قبلی</span>
+                    <span className="block truncate text-[13px] font-bold">{prev.name}</span>
+                  </span>
+                </button>
+              ) : (
+                <span />
+              )}
+              {next ? (
+                <button onClick={() => onNav(next)} className="group flex min-w-0 items-center gap-2 text-left text-paper/85 transition-colors hover:text-gold-2">
+                  <span className="min-w-0">
+                    <span className="block text-left text-[10px] text-paper/50">بعدی</span>
+                    <span className="block truncate text-left text-[13px] font-bold">{next.name}</span>
+                  </span>
+                  <ArrowNext className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+                </button>
+              ) : (
+                <span />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const GamesHallView: React.FC<{ onBack: () => void; onOpenItem: (i: Item) => void }> = ({
+  onBack,
+  onOpenItem,
+}) => {
+  const [q, setQ] = useState("");
+  const [plat, setPlat] = useState<"all" | PlatformId>("all");
+  const [genre, setGenre] = useState("all");
+  const [sort, setSort] = useState<"year" | "name">("year");
+  const [open, setOpen] = useState<Game | null>(null);
+
+  const shown = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const list = GAMES.filter(
+      (g) =>
+        (plat === "all" || g.platform === plat) &&
+        (genre === "all" || g.genre === genre) &&
+        (!s || g.name.includes(q.trim()) || g.nameEn.toLowerCase().includes(s))
+    );
+    return [...list].sort((a, b) =>
+      sort === "year" ? a.year - b.year || a.name.localeCompare(b.name, "fa") : a.name.localeCompare(b.name, "fa")
+    );
+  }, [q, plat, genre, sort]);
+
+  const reset = () => {
+    setQ("");
+    setPlat("all");
+    setGenre("all");
+  };
+
+  return (
+    <main className="mx-auto max-w-7xl px-4 pb-20 pt-8 sm:px-6">
+      <button
+        onClick={onBack}
+        className="group flex items-center gap-2 rounded-full border border-line-2 bg-cream/70 px-4 py-2 text-sm font-bold text-ink-2 transition-all hover:border-sienna hover:text-sienna"
+      >
+        <ArrowPrev className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        بازگشت به تالار اصلی
+      </button>
+
+      {/* سردر تالار بازی */}
+      <div className="dark-panel mt-6 overflow-hidden rounded-2xl border border-gold/25 text-paper">
+        <div className="flex items-center justify-center gap-2 px-4 pt-4">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span key={i} className="bulb" style={{ animationDelay: `${i * 0.12}s` }} aria-hidden />
+          ))}
+        </div>
+        <div className="flex flex-col items-start gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
+          <div className="min-w-0 flex-1">
+            <p className="font-type text-[11px] tracking-[0.3em] text-gold-2/80" dir="ltr">
+              GME — THE GAME VAULT
+            </p>
+            <h1 className="font-display mt-1 text-4xl font-bold sm:text-5xl">گنجینه‌ی بازی‌ها</h1>
+            <p className="mt-2 max-w-2xl text-[14.5px] leading-7 text-paper/75">
+              {toFa(GAMES.length)} بازی معروف از {toFa(PLATFORMS.length)} سکوی خاطره‌ساز؛ از پونگِ آرکید تا
+              سن‌آندریاس. هر کارتریج یک پرونده دارد — کلیک کنید و بخوانید.
+            </p>
+          </div>
+          <div className="shrink-0 rounded-xl border border-paper/15 bg-black/25 px-5 py-4 text-center">
+            <p className="font-display text-5xl font-bold leading-none text-gold-2">{toFa(GAMES.length)}</p>
+            <p className="mt-1.5 text-[11px] font-bold text-paper/60">بازی ثبت‌شده</p>
+          </div>
+        </div>
+
+        {/* جستجو و فیلترها */}
+        <div className="space-y-3 border-t border-paper/10 p-4 sm:p-6">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex min-w-56 flex-1 items-center gap-2 rounded-full border border-paper/20 bg-black/25 px-4 py-2 transition-all focus-within:border-gold-2">
+              <SearchIcon className="h-4 w-4 shrink-0 text-gold-2/80" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="جستجوی بازی… مثلاً «ماریو» یا ZELDA"
+                className="w-full min-w-0 bg-transparent text-[13.5px] text-paper outline-none placeholder:text-paper/40"
+                aria-label="جستجوی بازی"
+              />
+            </div>
+            <button
+              onClick={() => setSort("year")}
+              className={`rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all active:scale-95 ${
+                sort === "year" ? "border-gold-2 bg-gold-2 text-espresso" : "border-paper/25 text-paper/70 hover:border-gold-2/70 hover:text-gold-2"
+              }`}
+            >
+              تاریخ انتشار
+            </button>
+            <button
+              onClick={() => setSort("name")}
+              className={`rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all active:scale-95 ${
+                sort === "name" ? "border-gold-2 bg-gold-2 text-espresso" : "border-paper/25 text-paper/70 hover:border-gold-2/70 hover:text-gold-2"
+              }`}
+            >
+              نام الفبایی
+            </button>
+          </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+            <button
+              onClick={() => setPlat("all")}
+              className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all active:scale-95 ${
+                plat === "all" ? "border-gold-2 bg-gold-2 text-espresso" : "border-paper/25 text-paper/70 hover:border-gold-2/70 hover:text-gold-2"
+              }`}
+            >
+              همه‌ی سکوها · {toFa(GAMES.length)}
+            </button>
+            {PLATFORMS.map((p) => {
+              const n = GAMES.filter((g) => g.platform === p.id).length;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPlat(plat === p.id ? "all" : p.id)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all active:scale-95 ${
+                    plat === p.id ? "border-gold-2 bg-gold-2 text-espresso" : "border-paper/25 text-paper/70 hover:border-gold-2/70 hover:text-gold-2"
+                  }`}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ background: p.c }} />
+                  {p.fa} · {toFa(n)}
+                </button>
+              );
+            })}
+          </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+            <button
+              onClick={() => setGenre("all")}
+              className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all active:scale-95 ${
+                genre === "all" ? "border-sienna-2 bg-sienna text-cream" : "border-paper/25 text-paper/70 hover:border-sienna-2/70 hover:text-sienna-2"
+              }`}
+            >
+              همه‌ی ژانرها
+            </button>
+            {GENRES.map((gn) => (
+              <button
+                key={gn}
+                onClick={() => setGenre(genre === gn ? "all" : gn)}
+                className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all active:scale-95 ${
+                  genre === gn ? "border-sienna-2 bg-sienna text-cream" : "border-paper/25 text-paper/70 hover:border-sienna-2/70 hover:text-sienna-2"
+                }`}
+              >
+                {gn}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-6 text-[13px] font-bold text-ink-3">
+        {toFa(shown.length)} بازی یافت شد
+        {(q || plat !== "all" || genre !== "all") && (
+          <button onClick={reset} className="mr-3 text-sienna underline underline-offset-4 transition-colors hover:text-gold-3">
+            پاک‌کردن فیلترها
+          </button>
+        )}
+      </p>
+
+      {/* شبکه‌ی کارتریج‌ها */}
+      <div key={`${plat}-${genre}-${sort}-${q}`} className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        {shown.map((g, i) => {
+          const p = platformOf(g.platform);
+          return (
+            <button
+              key={g.id}
+              onClick={() => setOpen(g)}
+              className="cart-card rise-in group"
+              style={{ animationDelay: `${Math.min((i % 10) * 40, 400)}ms` }}
+              aria-label={`پرونده‌ی بازی ${g.name}`}
+            >
+              <span
+                className="cart-grooves-wrap relative block overflow-hidden p-4 pb-3"
+                style={{ background: `linear-gradient(160deg, ${p.c}4d 0%, rgba(26,19,11,0.96) 70%)` }}
+              >
+                <span className="cart-grooves" aria-hidden />
+                <span className="relative grid h-14 place-items-center text-5xl drop-shadow-[0_10px_14px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
+                  {g.emoji}
+                </span>
+                <span className="font-type relative mt-2 block truncate text-center text-[8.5px] tracking-[0.18em] text-paper/55" dir="ltr">
+                  {g.nameEn}
+                </span>
+              </span>
+              <span className="relative block border-t-2 border-dashed border-line-2 bg-[linear-gradient(165deg,#f9f0da,#efdfbd)] p-3 text-right">
+                <span className="font-display block truncate text-[19px] font-bold leading-7 text-ink transition-colors group-hover:text-sienna">
+                  {g.name}
+                </span>
+                <span className="mt-1 flex items-center gap-1.5 text-[10.5px] font-bold text-ink-3">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: p.c }} />
+                  {p.fa} · {toFa(g.year)} · {g.genre}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {shown.length === 0 && (
+        <div className="mt-8 rounded-xl border border-dashed border-line-2 py-16 text-center">
+          <p className="text-4xl">🕹️</p>
+          <p className="font-display mt-3 text-2xl font-bold text-ink">کارتریجی با این مشخصات پیدا نشد</p>
+          <p className="mt-2 text-[13px] text-ink-3">فیلترها را تغییر دهید یا اسم دیگری امتحان کنید.</p>
+          <button onClick={reset} className="mt-4 rounded-full bg-sienna px-5 py-2 text-[13px] font-bold text-cream transition-all hover:-translate-y-0.5 hover:bg-sienna-2 active:translate-y-0">
+            نمایش همه‌ی بازی‌ها
+          </button>
+        </div>
+      )}
+
+      <p className="mt-8 text-center text-xs text-ink-3">
+        بازی‌ها به ترتیب سال انتشار چیده شده‌اند · سال‌ها میلادی‌اند · کلیک روی هر کارتریج، پرونده‌اش را باز می‌کند
+      </p>
+
+      {open && (
+        <GameModal game={open} list={shown} onClose={() => setOpen(null)} onNav={(g) => setOpen(g)} onOpenItem={onOpenItem} />
+      )}
+    </main>
   );
 };

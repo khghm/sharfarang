@@ -184,8 +184,18 @@ export const StorageIcon: React.FC<IconProps> = (p) => (
   </svg>
 );
 
+export const GamesVaultIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <rect x="4" y="3.6" width="16" height="16.8" rx="1.8" />
+    <rect x="8" y="3.6" width="8" height="3.2" />
+    <rect x="7.2" y="10.4" width="9.6" height="6.4" rx="0.8" />
+    <path d="M4 7.4h16" />
+  </svg>
+);
+
 export const CATEGORY_ICONS: Record<string, React.FC<IconProps>> = {
   gaming: GameIcon,
+  games: GamesVaultIcon,
   arcade: ArcadeIcon,
   toys: ToysIcon,
   auto: AutoIcon,

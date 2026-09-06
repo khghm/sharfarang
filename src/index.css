@@ -460,6 +460,43 @@ input.time-range:disabled { opacity: 0.35; cursor: not-allowed; }
   box-shadow: 0 0 14px 3px rgba(232, 192, 122, 0.65);
 }
 
+/* ---------- کارتریج‌های بازی ---------- */
+
+.cart-card {
+  display: block;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #4a3a24;
+  background: linear-gradient(180deg, #2c2013 0%, #201710 100%);
+  box-shadow: 0 14px 26px -16px rgba(0, 0, 0, 0.55);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  text-align: right;
+}
+.cart-card:hover {
+  transform: translateY(-5px) rotate(-0.4deg);
+  box-shadow: 0 28px 46px -18px rgba(0, 0, 0, 0.65);
+}
+.cart-card:active { transform: translateY(-1px) scale(0.985); }
+.cart-grooves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 3px, transparent 3px 10px);
+}
+
+.bulb {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #d9b25f;
+  animation: bulb-kf 1.6s ease-in-out infinite;
+}
+@keyframes bulb-kf {
+  0%, 100% { opacity: 0.2; box-shadow: none; }
+  50% { opacity: 1; box-shadow: 0 0 10px rgba(217, 178, 95, 0.8); }
+}
+
 .tape {
   position: absolute;
   top: -7px;
