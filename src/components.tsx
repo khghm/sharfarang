@@ -2361,7 +2361,7 @@ async function fetchGameMedia(g: Game): Promise<GameMedia> {
         .slice(0, 6);
       if (names.length) {
         const ii = await fetch(
-          `https://en.wikipedia.org/w/api.php?action=query&titles=${names.map(encodeURIComponent).join("|")}&prop=imageinfo&iiprop=url&iiurlwidth=480&format=json&origin=*`
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${names.map(encodeURIComponent).join("|")}&prop=imageinfo&iiprop=url&iiurlwidth=640&format=json&origin=*`
         );
         if (ii.ok) {
           const iij = await ii.json();
@@ -2380,7 +2380,7 @@ async function fetchGameMedia(g: Game): Promise<GameMedia> {
   }
   GMEM.set(g.id, out);
   try {
-    sessionStorage.setItem(`sf-gm:${g.id}`, JSON.stringify(out));
+    sessionStorage.setItem(`sf-gm2:${g.id}`, JSON.stringify(out));
   } catch {
     /* کش پر */
   }
