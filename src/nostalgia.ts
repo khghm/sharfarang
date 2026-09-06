@@ -16,6 +16,8 @@ export interface NostalgiaItem {
   long: string;
   photo?: string;
   itemRef?: string;
+  photos?: string[]; // تصاویر بارگذاری‌شده از طرف مدیر
+  audio?: string; // نغمه‌ی بارگذاری‌شده از طرف مدیر
 }
 
 export const DECADES: { id: DecadeId; fa: string; range: string; tag: string }[] = [

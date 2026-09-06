@@ -556,6 +556,12 @@ const OMEM = new Map<string, ObjMedia>();
 
 async function fetchObjMedia(item: Item): Promise<ObjMedia> {
   if (OMEM.has(item.id)) return OMEM.get(item.id)!;
+  /* تصاویر بارگذاری‌شده از طرف مدیر، اولویت مطلق دارند */
+  if (item.photos && item.photos.length) {
+    const m: ObjMedia = { hero: item.photos[0], gallery: item.photos.slice(0, 6) };
+    OMEM.set(item.id, m);
+    return m;
+  }
   const out: ObjMedia = { hero: null, gallery: [] };
   try {
     const ck = sessionStorage.getItem(`sf-om2:${item.id}`);
@@ -1923,6 +1929,10 @@ async function mediaForEnTitle(titleIn: string): Promise<ObjMedia> {
 }
 
 const fetchNostMedia = async (n: NostalgiaItem): Promise<ObjMedia> => {
+  /* تصاویر بارگذاری‌شده از طرف مدیر، اولویت مطلق دارند */
+  if (n.photos && n.photos.length) {
+    return { hero: n.photos[0], gallery: n.photos.slice(0, 6) };
+  }
   const linked = n.itemRef ? ITEMS.find((i) => i.id === n.itemRef) : undefined;
   if (linked) return fetchObjMedia(linked);
   if (!n.photo) return { hero: null, gallery: [] };
@@ -2111,7 +2121,7 @@ const NostalgiaModal: React.FC<{ n: NostItem; list: NostItem[]; onClose: () => v
                 : "با مایه‌های الکترونیک دهه‌ی هشتاد؛ از زنگ پلی‌فونیک تا کافه‌نت."}
             </p>
             <div className="mt-3">
-              <MotifPlayer motif={motif} light pausedLabel="پخش نغمه‌ی خاطره" playingLabel="توقف نغمه" />
+              <MotifPlayer motif={motif} light src={n.audio} pausedLabel="پخش نغمه‌ی خاطره" playingLabel="توقف نغمه" />
             </div>
           </div>
 
@@ -2300,6 +2310,12 @@ const GMEM = new Map<string, GameMedia>();
 
 async function fetchGameMedia(g: Game): Promise<GameMedia> {
   if (GMEM.has(g.id)) return GMEM.get(g.id)!;
+  /* تصاویر بارگذاری‌شده از طرف مدیر، اولویت مطلق دارند */
+  if (g.photos && g.photos.length) {
+    const m: GameMedia = { hero: g.photos[0], gallery: g.photos.slice(0, 6), extract: "" };
+    GMEM.set(g.id, m);
+    return m;
+  }
   const out: GameMedia = { hero: null, gallery: [], extract: "" };
   try {
     const ck = sessionStorage.getItem(`sf-gm2:${g.id}`);
@@ -2416,8 +2432,21 @@ export const MotifPlayer: React.FC<{
   pausedLabel: string;
   playingLabel: string;
   light?: boolean;
-}> = ({ motif, pausedLabel, playingLabel, light }) => {
+  src?: string; // نغمه‌ی بارگذاری‌شده از هارد (در صورت وجود، جایگزین سینت‌سایزر می‌شود)
+}> = ({ motif, pausedLabel, playingLabel, light, src }) => {
   const [playing, setPlaying] = useState(false);
+
+  /* اگر مدیر نغمه‌ای آپلود کرده باشد، همان پخش می‌شود */
+  if (src) {
+    return (
+      <div className="relative w-full">
+        <audio controls src={src} className="h-11 w-full rounded-lg" />
+        <p className={`mt-1.5 text-center text-[10px] leading-4 ${light ? "text-ink-3" : "text-paper/45"}`}>
+          نغمه‌ی بارگذاری‌شده برای این اثر از آرشیو موزه
+        </p>
+      </div>
+    );
+  }
   const ctxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<number | null>(null);
 
@@ -2659,7 +2688,7 @@ export const GameModal: React.FC<{
               </div>
             )}
             {/* نغمه‌ی اختصاصی بازی */}
-            <MotifPlayer motif={motif} pausedLabel="پخش نغمه‌ی بازی" playingLabel="توقف نغمه" />
+            <MotifPlayer motif={motif} src={game.audio} pausedLabel="پخش نغمه‌ی بازی" playingLabel="توقف نغمه" />
             <div className="relative grid w-full grid-cols-2 gap-2 text-paper/90">
               <div className="rounded-lg border border-paper/15 bg-black/25 px-3 py-2.5">
                 <p className="text-[10px] text-paper/55">سال انتشار</p>

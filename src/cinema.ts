@@ -13,6 +13,8 @@ export interface MediaEntry {
   note?: string;
   director: string;
   country: string;
+  photos?: string[]; // تصاویر بارگذاری‌شده از طرف مدیر
+  audio?: string; // نغمه‌ی بارگذاری‌شده از طرف مدیر
 }
 
 export interface MediaHallConfig {

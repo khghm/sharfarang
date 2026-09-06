@@ -17,6 +17,8 @@ export interface Game {
   emoji: string;
   desc: string;
   note?: string;
+  photos?: string[]; // تصاویر بارگذاری‌شده از طرف مدیر
+  audio?: string; // نغمه‌ی بارگذاری‌شده از طرف مدیر
 }
 
 export const PLATFORMS: { id: PlatformId; fa: string; c: string }[] = [

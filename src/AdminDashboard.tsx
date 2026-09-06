@@ -60,6 +60,45 @@ const Ic = {
   check: "M4 12l5 5L20 6",
 };
 
+/* ---------------- بارگذاری پرونده از هارد ---------------- */
+const MB = 1024 * 1024;
+
+const readImage = (f: File, maxDim = 900, quality = 0.75): Promise<string> =>
+  new Promise((res, rej) => {
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        rej(new Error("no canvas"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      rej(new Error("تصویر نامعتبر"));
+    };
+    img.src = url;
+  });
+
+const readAudio = (f: File): Promise<string> =>
+  new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(new Error("خواندن پرونده ناموفق بود"));
+    r.readAsDataURL(f);
+  });
+
 /* ---------------- تعریف فیلدها و مجموعه‌ها ---------------- */
 type FType = "text" | "number" | "select" | "textarea" | "emoji";
 interface Field {
@@ -137,6 +176,8 @@ interface ColConfig {
   filters: { key: string; label: string; options: { v: string; fa: string }[] }[];
   titleKey: string;
   subKeys: string[];
+  photoUpload?: boolean; // امکان بارگذاری تصاویر از هارد
+  audioUpload?: boolean; // امکان بارگذاری نغمه از هارد
 }
 
 function CollectionManager({ cfg }: { cfg: ColConfig }) {
@@ -173,6 +214,47 @@ function CollectionManager({ cfg }: { cfg: ColConfig }) {
 
   const setField = (key: string, val: unknown) =>
     setEditor((e) => (e ? { ...e, record: { ...e.record, [key]: val } } : e));
+
+  const [uploadErr, setUploadErr] = useState("");
+
+  const addPhotos = async (files: FileList | null) => {
+    if (!files || !editor) return;
+    setUploadErr("");
+    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (!arr.length) return;
+    try {
+      const urls = await Promise.all(arr.map((f) => readImage(f)));
+      setEditor((e) =>
+        e
+          ? { ...e, record: { ...e.record, photos: [...((e.record.photos as string[]) ?? []), ...urls] } }
+          : e
+      );
+    } catch {
+      setUploadErr("در خواندن تصویر خطایی رخ داد؛ پرونده‌ی دیگری امتحان کنید.");
+    }
+  };
+
+  const removePhoto = (idx: number) =>
+    setEditor((e) =>
+      e
+        ? { ...e, record: { ...e.record, photos: ((e.record.photos as string[]) ?? []).filter((_, i) => i !== idx) } }
+        : e
+    );
+
+  const setAudio = async (file: File | null) => {
+    if (!file || !editor) return;
+    setUploadErr("");
+    if (file.size > 4 * MB) {
+      setUploadErr("حجم نغمه بیش از ۴ مگابایت است؛ برای ماندگاری در مرورگر پرونده‌ی کوچک‌تری انتخاب کنید.");
+      return;
+    }
+    try {
+      const url = await readAudio(file);
+      setEditor((e) => (e ? { ...e, record: { ...e.record, audio: url } } : e));
+    } catch {
+      setUploadErr("در خواندن پرونده‌ی صوتی خطایی رخ داد.");
+    }
+  };
 
   const save = () => {
     if (!editor) return;
@@ -365,6 +447,98 @@ function CollectionManager({ cfg }: { cfg: ColConfig }) {
               })}
             </div>
 
+            {/* بارگذاری تصاویر از هارد */}
+            {cfg.photoUpload && (
+              <div className="mt-5 rounded-xl border border-line-2 bg-paper-2/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[12.5px] font-bold text-ink">تصاویر {cfg.singular} (از هارد)</p>
+                    <p className="mt-0.5 text-[11px] leading-5 text-ink-3">
+                      چند تصویر انتخاب کنید؛ در پرونده‌ی نمایشی به‌جای عکس ویکی‌پدیا استفاده می‌شوند.
+                    </p>
+                  </div>
+                  <label className="flex cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12.5px] font-bold text-cream transition-all hover:-translate-y-0.5 active:translate-y-0" style={{ background: cfg.accent }}>
+                    <I d={Ic.plus} className="h-4 w-4" /> افزودن تصویر
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        void addPhotos(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+                {((editor.record.photos as string[]) ?? []).length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2.5">
+                    {((editor.record.photos as string[]) ?? []).map((p, i) => (
+                      <div key={i} className="group relative h-20 w-24 overflow-hidden rounded-lg border border-line-2">
+                        <img src={p} alt="" className="h-full w-full object-cover" />
+                        <button
+                          onClick={() => removePhoto(i)}
+                          aria-label="حذف تصویر"
+                          className="absolute left-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-espresso/80 text-cream opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          <I d={Ic.x} className="h-3.5 w-3.5" />
+                        </button>
+                        {i === 0 && (
+                          <span className="absolute bottom-1 right-1 rounded bg-gold-3 px-1.5 py-0.5 text-[9px] font-bold text-cream">اصلی</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* بارگذاری نغمه از هارد */}
+            {cfg.audioUpload && (
+              <div className="mt-4 rounded-xl border border-line-2 bg-paper-2/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[12.5px] font-bold text-ink">نغمه‌ی {cfg.singular} (از هارد)</p>
+                    <p className="mt-0.5 text-[11px] leading-5 text-ink-3">
+                      یک پرونده‌ی صوتی (MP3/WAV/OGG) بارگذاری کنید؛ در پرونده‌ی نمایشی پخش می‌شود.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editor.record.audio ? (
+                      <button
+                        onClick={() => setEditor((e) => (e ? { ...e, record: { ...e.record, audio: undefined } } : e))}
+                        className="flex items-center gap-1.5 rounded-lg border border-sienna px-3.5 py-2 text-[12.5px] font-bold text-sienna transition-colors hover:bg-sienna hover:text-cream"
+                      >
+                        <I d={Ic.trash} className="h-4 w-4" /> حذف نغمه
+                      </button>
+                    ) : (
+                      <label className="flex cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12.5px] font-bold text-cream transition-all hover:-translate-y-0.5 active:translate-y-0" style={{ background: cfg.accent }}>
+                        <I d={Ic.up} className="h-4 w-4" /> بارگذاری نغمه
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            void setAudio(e.target.files?.[0] ?? null);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+                {Boolean(editor.record.audio) && (
+                  <audio controls src={editor.record.audio as string} className="mt-3 h-10 w-full" />
+                )}
+              </div>
+            )}
+
+            {uploadErr && (
+              <p className="mt-3 rounded-lg border border-sienna/50 bg-sienna/10 px-3 py-2 text-[12px] font-bold text-sienna">
+                {uploadErr}
+              </p>
+            )}
+
             {/* ویرایش پیشرفته‌ی JSON */}
             <div className="mt-5 rounded-xl border border-line-2 bg-paper-2/60">
               <button onClick={() => { setJsonMode((m) => !m); setJsonText(JSON.stringify(editor.record, null, 2)); }} className="flex w-full items-center justify-between px-4 py-2.5 text-[12px] font-bold text-ink-2">
@@ -427,6 +601,8 @@ const COLS: Record<string, ColConfig> = {
     filters: itemFilters,
     titleKey: "name",
     subKeys: ["year", "category", "status"],
+    photoUpload: true,
+    audioUpload: true,
   },
   games: {
     key: "games", title: "بازی‌ها", singular: "بازی", icon: (p) => <I {...p} d={Ic.game} />, accent: "#2f5d6e",
@@ -450,6 +626,8 @@ const COLS: Record<string, ColConfig> = {
     ],
     titleKey: "name",
     subKeys: ["year", "platform", "genre"],
+    photoUpload: true,
+    audioUpload: true,
   },
   movies: {
     key: "movies", title: "فیلم‌ها", singular: "فیلم", icon: (p) => <I {...p} d={Ic.film} />, accent: "#7c5aa2",
@@ -471,6 +649,8 @@ const COLS: Record<string, ColConfig> = {
     filters: [{ key: "genre", label: "ژانر", options: CINEMA_HALL.genres.map((g) => ({ v: g, fa: g })) }],
     titleKey: "name",
     subKeys: ["year", "genre", "director"],
+    photoUpload: true,
+    audioUpload: true,
   },
   series: {
     key: "series", title: "سریال‌ها", singular: "سریال", icon: (p) => <I {...p} d={Ic.tv} />, accent: "#3f7d50",
@@ -492,6 +672,8 @@ const COLS: Record<string, ColConfig> = {
     filters: [{ key: "genre", label: "ژانر", options: SERIES_HALL.genres.map((g) => ({ v: g, fa: g })) }],
     titleKey: "name",
     subKeys: ["year", "genre", "director"],
+    photoUpload: true,
+    audioUpload: true,
   },
   memories: {
     key: "memories", title: "خاطره‌های دهه‌ها", singular: "خاطره", icon: (p) => <I {...p} d={Ic.clock} />, accent: "#b98a2f",
@@ -514,6 +696,8 @@ const COLS: Record<string, ColConfig> = {
     ],
     titleKey: "title",
     subKeys: ["year", "decade", "group"],
+    photoUpload: true,
+    audioUpload: true,
   },
 };
 

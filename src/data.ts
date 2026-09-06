@@ -44,6 +44,8 @@ export interface Item {
   long: string; // شرح کامل در مودال
   milestones: Milestone[]; // تایم‌لاین نسل‌ها و تحول
   specs: { maker: string; country: string; fate: string };
+  photos?: string[]; // تصاویر بارگذاری‌شده از طرف مدیر (data URL)
+  audio?: string; // نغمه‌ی بارگذاری‌شده از طرف مدیر (data URL)
 }
 
 export interface Category {

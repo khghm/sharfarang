@@ -22,6 +22,12 @@ const cleanEn = (s: string) => s.replace(/\(.*?\)/g, "").replace(/\s+/g, " ").tr
 
 async function fetchEntryMedia(e: MediaEntry): Promise<EntryMedia> {
   if (MEM.has(e.id)) return MEM.get(e.id)!;
+  /* تصاویر بارگذاری‌شده از طرف مدیر، اولویت مطلق دارند */
+  if (e.photos && e.photos.length) {
+    const m: EntryMedia = { hero: e.photos[0], gallery: e.photos.slice(0, 6), extract: "" };
+    MEM.set(e.id, m);
+    return m;
+  }
   const out: EntryMedia = { hero: null, gallery: [], extract: "" };
   try {
     const ck = sessionStorage.getItem(`sf-cm2:${e.id}`);
@@ -275,7 +281,7 @@ const MediaModal: React.FC<{
               </div>
             </div>
 
-            <MotifPlayer motif={motif} pausedLabel="پخش نغمه" playingLabel="توقف نغمه" />
+            <MotifPlayer motif={motif} src={entry.audio} pausedLabel="پخش نغمه" playingLabel="توقف نغمه" />
           </aside>
 
           <div className="p-6 sm:p-8">
