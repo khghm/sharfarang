@@ -19,7 +19,9 @@ export type CategoryId =
   | "comm"
   | "photo"
   | "office"
-  | "home";
+  | "home"
+  | "cinema"
+  | "series";
 
 export type StatusId = "retired" | "museum" | "legendary" | "rare";
 
@@ -87,6 +89,8 @@ export const CATEGORIES: Category[] = [
   { id: "office", fa: "لوازم‌التحریر و اداره", en: "OFFICE & WRITING", code: "OFC", icon: "office", blurb: "تایپ‌رایترها و کاربن‌ها؛ ابزارهایی که بوی جوهر و کاغذ کاهی می‌دادند." },
   { id: "home", fa: "وسایل خانه و دکور", en: "HOME & DECOR", code: "HOM", icon: "home", blurb: "چراغ نفتی، یخدان و سماور؛ ضربان آرام خانه‌های قدیمی." },
   { id: "games", fa: "گنجینه‌ی بازی‌ها", en: "THE GAME VAULT", code: "GME", icon: "games", blurb: "بیش از سیصد بازی معروف از آتاری تا پلی‌استیشن؛ هر کارتریج، یک پرونده‌ی کامل." },
+  { id: "cinema", fa: "تالار فیلم‌بازان", en: "THE CINEMA HALL", code: "CIN", icon: "cinema", blurb: "از گاو و قیصر تا پدرخوانده؛ پرده‌ی نقره‌ایِ خاطره‌ها با عکس و تاریخچه‌ی واقعی." },
+  { id: "series", fa: "تالار سریال‌بازان", en: "THE SERIES HALL", code: "SER", icon: "series", blurb: "از دایی جان ناپلئون و اوشین تا بریکینگ بد؛ قابِ کوچک، خاطره‌های بزرگ." },
 ];
 
 export const catById = (id: CategoryId): Category =>

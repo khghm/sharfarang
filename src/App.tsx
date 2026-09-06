@@ -24,6 +24,8 @@ import {
   TicketIcon,
 } from "./icons";
 import { GAMES, type Game } from "./games";
+import { CINEMA_HALL, SERIES_HALL } from "./cinema";
+import { MediaHallView } from "./MediaHall";
 import {
   useCountUp,
   useHashItem,
@@ -410,6 +412,14 @@ const App: React.FC = () => {
           }}
           onOpenItem={(i) => openItem(i)}
         />
+      ) : view.t === "cat" && (view.id === "cinema" || view.id === "series") ? (
+        <MediaHallView
+          cfg={view.id === "cinema" ? CINEMA_HALL : SERIES_HALL}
+          onBack={() => {
+            setView({ t: "home" });
+            window.scrollTo(0, 0);
+          }}
+        />
       ) : view.t === "cat" ? (
         <CategoryView
           cat={catById(view.id)}
@@ -526,7 +536,15 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {CATEGORIES.map((c, idx) => {
                 const Icon = CATEGORY_ICONS[c.icon];
-                const count = c.id === "games" ? GAMES.length : ITEMS.filter((i) => i.category === c.id).length;
+                const count =
+                  c.id === "games"
+                    ? GAMES.length
+                    : c.id === "cinema"
+                    ? CINEMA_HALL.entries.length
+                    : c.id === "series"
+                    ? SERIES_HALL.entries.length
+                    : ITEMS.filter((i) => i.category === c.id).length;
+                const unit = c.id === "cinema" ? "فیلم" : c.id === "series" ? "سریال" : c.id === "games" ? "بازی" : "شیء";
                 return (
                   <Reveal key={c.id} delay={(idx % 4) * 80}>
                     <button
@@ -536,7 +554,7 @@ const App: React.FC = () => {
                       <div className="flex items-center justify-between">
                         <span className="font-type text-[10px] tracking-[0.25em] text-gold-3">{c.code}</span>
                         <span className="rounded-full border border-line-2 bg-cream/70 px-2.5 py-0.5 text-[11px] font-bold text-ink-2">
-                          {toFa(count)} شیء
+                          {toFa(count)} {unit}
                         </span>
                       </div>
                       <span className="mt-4 grid h-16 w-16 place-items-center rounded-full border-2 border-line-2 bg-cream text-gold-3 shadow-[inset_0_2px_8px_rgba(120,80,30,0.18)] transition-all duration-300 group-hover:rotate-6 group-hover:border-gold group-hover:text-sienna">

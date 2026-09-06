@@ -184,6 +184,21 @@ export const StorageIcon: React.FC<IconProps> = (p) => (
   </svg>
 );
 
+export const FilmIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <rect x="3.6" y="4.4" width="16.8" height="15.2" rx="2" />
+    <path d="M7.4 4.4v15.2M16.6 4.4v15.2M3.6 8.6h3.8M3.6 12h3.8M3.6 15.4h3.8M16.6 8.6h3.8M16.6 12h3.8M16.6 15.4h3.8" />
+  </svg>
+);
+
+export const TvIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <rect x="3.4" y="6.8" width="17.2" height="12.4" rx="2" />
+    <path d="m8.6 2.6 3.4 3.6 3.4-3.6M8.6 21.4h6.8" />
+    <circle cx="17.4" cy="10.6" r="0.8" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 export const GamesVaultIcon: React.FC<IconProps> = (p) => (
   <svg {...base(p)}>
     <rect x="4" y="3.6" width="16" height="16.8" rx="1.8" />
@@ -196,6 +211,8 @@ export const GamesVaultIcon: React.FC<IconProps> = (p) => (
 export const CATEGORY_ICONS: Record<string, React.FC<IconProps>> = {
   gaming: GameIcon,
   games: GamesVaultIcon,
+  cinema: FilmIcon,
+  series: TvIcon,
   arcade: ArcadeIcon,
   toys: ToysIcon,
   auto: AutoIcon,
