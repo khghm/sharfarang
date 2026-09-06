@@ -37,6 +37,7 @@ import {
   type Game,
   type PlatformId,
 } from "./games";
+import { motifForGame, motifForMemory, type Motif } from "./note";
 import {
   ArrowNext,
   ArrowPrev,
@@ -547,6 +548,78 @@ export const ItemPhoto: React.FC<{ item: Item; className?: string }> = ({ item, 
 
 const PHOTO_OVERLAY =
   "absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-700 has-[img]:opacity-100";
+
+/* ── گالری عکس‌های اشیاء (چند تصویر از ویکی‌پدیا) ── */
+
+type ObjMedia = { hero: string | null; gallery: string[] };
+const OMEM = new Map<string, ObjMedia>();
+
+async function fetchObjMedia(item: Item): Promise<ObjMedia> {
+  if (OMEM.has(item.id)) return OMEM.get(item.id)!;
+  const out: ObjMedia = { hero: null, gallery: [] };
+  try {
+    const ck = sessionStorage.getItem(`sf-om2:${item.id}`);
+    if (ck) {
+      const j = JSON.parse(ck) as ObjMedia;
+      OMEM.set(item.id, j);
+      return j;
+    }
+    let title = WIKI_OVERRIDES[item.id] ?? cleanEn(item.nameEn);
+    const r = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(title)}&limit=1&namespace=0&format=json&origin=*`
+    );
+    if (r.ok) {
+      const j = await r.json();
+      title = (j?.[1]?.[0] as string) ?? title;
+    }
+    const s = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+    if (s.ok) {
+      const sj = await s.json();
+      if (sj?.type !== "disambiguation") {
+        out.hero = sj?.originalimage?.source ?? sj?.thumbnail?.source ?? null;
+      }
+    }
+    const im = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=images&imlimit=20&format=json&origin=*`
+    );
+    if (im.ok) {
+      const ij = await im.json();
+      const pages = Object.values<any>(ij.query?.pages ?? {})[0] as any;
+      const names: string[] = ((pages?.images ?? []) as { title: string }[])
+        .map((x) => x.title)
+        .filter((t) => /\.(jpe?g|png|webp)$/i.test(t))
+        .filter(
+          (t) =>
+            !/svg|icon|logo|symbol|wiktionary|question_book|edit-clear|disambig|cscr|padlock|commons-logo|wikipedia|nospam|edit-icon/i.test(t)
+        )
+        .slice(0, 6);
+      if (names.length) {
+        const ii = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${names.map(encodeURIComponent).join("|")}&prop=imageinfo&iiprop=url&iiurlwidth=640&format=json&origin=*`
+        );
+        if (ii.ok) {
+          const iij = await ii.json();
+          const urls = Object.values<any>(iij.query?.pages ?? {})
+            .map((pg: any) => pg.imageinfo?.[0]?.thumburl ?? pg.imageinfo?.[0]?.url)
+            .filter(Boolean) as string[];
+          let gal = urls.slice(0, 4);
+          if (out.hero && !gal.includes(out.hero)) gal = [out.hero, ...gal].slice(0, 4);
+          out.gallery = gal;
+          if (!out.hero && gal[0]) out.hero = gal[0];
+        }
+      }
+    }
+  } catch {
+    /* آفلاین */
+  }
+  OMEM.set(item.id, out);
+  try {
+    sessionStorage.setItem(`sf-om2:${item.id}`, JSON.stringify(out));
+  } catch {
+    /* کش پر */
+  }
+  return out;
+}
 
 const faToEn = (s: string) =>
   s
@@ -1099,6 +1172,29 @@ export const ItemModal: React.FC<{
   const [birth, setBirth] = useState("");
   const peers = contemporaries(item, 4);
 
+  const [omedia, setOmedia] = useState<ObjMedia | null>(null);
+  const [omain, setOmain] = useState(0);
+  const [ofail, setOfail] = useState(false);
+  useEffect(() => {
+    let live = true;
+    setOmedia(null);
+    setOmain(0);
+    setOfail(false);
+    fetchObjMedia(item).then((m) => {
+      if (live) setOmedia(m);
+    });
+    return () => {
+      live = false;
+    };
+  }, [item]);
+  const ophotos = useMemo(() => {
+    if (!omedia) return [];
+    const arr = [...(omedia.hero ? [omedia.hero] : []), ...omedia.gallery.filter((x) => x !== omedia.hero)];
+    return Array.from(new Set(arr)).slice(0, 4);
+  }, [omedia]);
+  const ohero = ophotos[omain] ?? null;
+  const oshow = !!ohero && !ofail;
+
   const related = useMemo(
     () =>
       ITEMS.filter((x) => x.category === item.category && x.id !== item.id)
@@ -1132,7 +1228,7 @@ export const ItemModal: React.FC<{
         role="dialog"
         aria-modal="true"
         aria-label={`پرونده‌ی ${item.name}`}
-        className="modal-panel aged-card relative max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl"
+        className="modal-panel aged-card relative max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl"
       >
         <button
           onClick={onClose}
@@ -1144,18 +1240,78 @@ export const ItemModal: React.FC<{
           </svg>
         </button>
 
-        <div className="grid md:grid-cols-[300px_1fr]">
+        <div className="grid md:grid-cols-[360px_1fr]">
           {/* لوح نمایش */}
-          <aside className="dark-panel relative flex flex-col items-center justify-center gap-4 overflow-hidden p-8 text-center md:min-h-[560px]">
+          <aside className="dark-panel relative flex flex-col items-center justify-center gap-4 overflow-hidden p-6 text-center md:min-h-[560px] sm:p-8">
             <div className="beam lamp-glow pointer-events-none absolute inset-0" aria-hidden />
             <div className="scanlines pointer-events-none absolute inset-0 opacity-40" aria-hidden />
-            <span className="font-type relative text-[10px] tracking-[0.3em] text-gold-2/80" dir="ltr">
-              EXHIBIT № {plaqueNo(idx + 1)}
-            </span>
-            <span className="relative grid h-52 w-52 place-items-center overflow-hidden rounded-full border-4 border-double border-gold/40 bg-espresso-2 shadow-[0_24px_50px_-18px_rgba(0,0,0,0.8)] sm:h-60 sm:w-60">
-              <span className="animate-bob text-8xl leading-none emoji-aged sm:text-9xl">{item.image}</span>
-              <ItemPhoto item={item} className={PHOTO_OVERLAY} />
-            </span>
+            {/* صحنه‌ی نمایش بزرگ با گالری */}
+            <div className="relative h-56 w-full overflow-hidden rounded-2xl border border-gold/30 bg-espresso-2 shadow-[0_28px_60px_-20px_rgba(0,0,0,0.85)] sm:h-72 md:h-64">
+              <span className="beam lamp-glow pointer-events-none absolute inset-0" aria-hidden />
+              {oshow ? (
+                <img
+                  key={ohero}
+                  src={ohero!}
+                  alt={`تصویر ${item.name}`}
+                  referrerPolicy="no-referrer"
+                  onError={() => setOfail(true)}
+                  className="fade-in photo-aged h-full w-full object-cover"
+                />
+              ) : (
+                <span className="grid h-full w-full place-items-center">
+                  <span className="animate-bob text-[96px] leading-none drop-shadow-[0_18px_28px_rgba(0,0,0,0.55)] emoji-aged">
+                    {item.image}
+                  </span>
+                </span>
+              )}
+              <span className="scanlines pointer-events-none absolute inset-0 opacity-25" aria-hidden />
+              <span className="font-type absolute right-2.5 top-2.5 rounded bg-espresso/85 px-2 py-0.5 text-[9px] tracking-[0.25em] text-gold-2">
+                EXHIBIT № {plaqueNo(idx + 1)}
+              </span>
+              {oshow && (
+                <span className="absolute bottom-2 left-2.5 rounded bg-espresso/80 px-2 py-0.5 text-[9.5px] text-paper/70">
+                  عکس واقعی · ویکی‌پدیا
+                </span>
+              )}
+              {ophotos.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setOmain((omain + ophotos.length - 1) % ophotos.length)}
+                    aria-label="تصویر قبلی"
+                    className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-espresso/70 text-paper/90 transition-all hover:bg-espresso active:scale-90"
+                  >
+                    <ArrowPrev className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setOmain((omain + 1) % ophotos.length)}
+                    aria-label="تصویر بعدی"
+                    className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-espresso/70 text-paper/90 transition-all hover:bg-espresso active:scale-90"
+                  >
+                    <ArrowNext className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              )}
+            </div>
+            {/* بندانگشتی‌های گالری — با کلیک، در همان ابعاد بزرگ دیده می‌شود */}
+            {ophotos.length > 1 && (
+              <div className="flex w-full items-center justify-center gap-2">
+                {ophotos.map((p, i) => (
+                  <button
+                    key={p}
+                    onClick={() => {
+                      setOfail(false);
+                      setOmain(i);
+                    }}
+                    className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition-all active:scale-95 ${
+                      i === omain ? "border-gold-2 opacity-100 ring-1 ring-gold-2" : "border-paper/20 opacity-55 hover:opacity-90"
+                    }`}
+                    aria-label={`تصویر ${toFa(i + 1)} از ${item.name}`}
+                  >
+                    <img src={p} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
             <span key={`st-${item.id}`} className="stamp stamp-in relative !text-[13px]" style={{ color: "#e8c07a" }}>
               {STATUS[item.status].fa}
             </span>
@@ -1696,6 +1852,83 @@ const NostalgiaPhoto: React.FC<{ n: NostalgiaItem; className?: string }> = ({ n,
   );
 };
 
+/* ── گالری چندتصویری برای خاطره‌ها ── */
+
+async function mediaForEnTitle(titleIn: string): Promise<ObjMedia> {
+  const key = `sf-em2:${titleIn}`;
+  if (OMEM.has(key)) return OMEM.get(key)!;
+  const out: ObjMedia = { hero: null, gallery: [] };
+  try {
+    const ck = sessionStorage.getItem(key);
+    if (ck) {
+      const j = JSON.parse(ck) as ObjMedia;
+      OMEM.set(key, j);
+      return j;
+    }
+    let title = titleIn;
+    const r = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(title)}&limit=1&namespace=0&format=json&origin=*`
+    );
+    if (r.ok) {
+      const j = await r.json();
+      title = (j?.[1]?.[0] as string) ?? title;
+    }
+    const s = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+    if (s.ok) {
+      const sj = await s.json();
+      if (sj?.type !== "disambiguation") {
+        out.hero = sj?.originalimage?.source ?? sj?.thumbnail?.source ?? null;
+      }
+    }
+    const im = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=images&imlimit=20&format=json&origin=*`
+    );
+    if (im.ok) {
+      const ij = await im.json();
+      const pages = Object.values<any>(ij.query?.pages ?? {})[0] as any;
+      const names: string[] = ((pages?.images ?? []) as { title: string }[])
+        .map((x) => x.title)
+        .filter((t) => /\.(jpe?g|png|webp)$/i.test(t))
+        .filter(
+          (t) =>
+            !/svg|icon|logo|symbol|wiktionary|question_book|edit-clear|disambig|cscr|padlock|commons-logo|wikipedia|nospam|edit-icon/i.test(t)
+        )
+        .slice(0, 6);
+      if (names.length) {
+        const ii = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${names.map(encodeURIComponent).join("|")}&prop=imageinfo&iiprop=url&iiurlwidth=640&format=json&origin=*`
+        );
+        if (ii.ok) {
+          const iij = await ii.json();
+          const urls = Object.values<any>(iij.query?.pages ?? {})
+            .map((pg: any) => pg.imageinfo?.[0]?.thumburl ?? pg.imageinfo?.[0]?.url)
+            .filter(Boolean) as string[];
+          let gal = urls.slice(0, 4);
+          if (out.hero && !gal.includes(out.hero)) gal = [out.hero, ...gal].slice(0, 4);
+          out.gallery = gal;
+          if (!out.hero && gal[0]) out.hero = gal[0];
+        }
+      }
+    }
+  } catch {
+    /* آفلاین */
+  }
+  OMEM.set(key, out);
+  try {
+    sessionStorage.setItem(key, JSON.stringify(out));
+  } catch {
+    /* کش پر */
+  }
+  return out;
+}
+
+const fetchNostMedia = async (n: NostalgiaItem): Promise<ObjMedia> => {
+  const linked = n.itemRef ? ITEMS.find((i) => i.id === n.itemRef) : undefined;
+  if (linked) return fetchObjMedia(linked);
+  if (!n.photo) return { hero: null, gallery: [] };
+  return mediaForEnTitle(n.photo);
+};
+
 const PHOTO_FADE = "absolute inset-0 opacity-0 transition-opacity duration-700 has-[img]:opacity-100";
 
 /* ─────────────────────── مودال خاطره ─────────────────────── */
@@ -1713,6 +1946,30 @@ const NostalgiaModal: React.FC<{ n: NostItem; list: NostItem[]; onClose: () => v
   const next = idx < list.length - 1 ? list[idx + 1] : null;
   const meta = DECADES.find((d) => d.id === n.decade)!;
   const shelfmates = NOSTALGIA.filter((x) => x.group === n.group && x.id !== n.id).slice(0, 4);
+  const motif = useMemo(() => motifForMemory(n), [n]);
+
+  const [nmedia, setNmedia] = useState<ObjMedia | null>(null);
+  const [nmain, setNmain] = useState(0);
+  const [nfail, setNfail] = useState(false);
+  useEffect(() => {
+    let live = true;
+    setNmedia(null);
+    setNmain(0);
+    setNfail(false);
+    fetchNostMedia(n).then((m) => {
+      if (live) setNmedia(m);
+    });
+    return () => {
+      live = false;
+    };
+  }, [n]);
+  const nphotos = useMemo(() => {
+    if (!nmedia) return [];
+    const arr = [...(nmedia.hero ? [nmedia.hero] : []), ...nmedia.gallery.filter((x) => x !== nmedia.hero)];
+    return Array.from(new Set(arr)).slice(0, 4);
+  }, [nmedia]);
+  const nhero = nphotos[nmain] ?? null;
+  const nshow = !!nhero && !nfail;
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
@@ -1737,7 +1994,7 @@ const NostalgiaModal: React.FC<{ n: NostItem; list: NostItem[]; onClose: () => v
         role="dialog"
         aria-modal="true"
         aria-label={`خاطره‌ی ${n.title}`}
-        className="modal-panel aged-card relative max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl"
+        className="modal-panel aged-card relative max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl outline-none sm:rounded-2xl"
       >
         <button
           onClick={onClose}
@@ -1749,18 +2006,72 @@ const NostalgiaModal: React.FC<{ n: NostItem; list: NostItem[]; onClose: () => v
           </svg>
         </button>
 
-        {/* قاب عکس خاطره */}
-        <div className="relative h-60 overflow-hidden border-b border-dashed border-line-2 sm:h-72">
-          <span className="absolute inset-0 grid place-items-center text-[92px] emoji-aged">{n.emoji}</span>
-          <span className="sunburst absolute inset-0" aria-hidden />
-          <span className="scanlines absolute inset-0 opacity-25" aria-hidden />
-          <NostalgiaPhoto n={n} className={PHOTO_FADE} />
-          <span className="font-type absolute bottom-3 right-4 rounded bg-espresso/85 px-2.5 py-1 text-[10px] tracking-[0.25em] text-gold-2" dir="ltr">
-            {meta.range}
-          </span>
-          <span className="stamp absolute bottom-3 left-4 !text-[11px]" style={{ color: "#8a4b26" }}>
-            {GROUP_LABEL[n.group]}
-          </span>
+        {/* قاب عکس خاطره — بزرگ و گالری‌دار */}
+        <div className="border-b border-dashed border-line-2 p-4 sm:p-5">
+          <div className="relative h-64 overflow-hidden rounded-xl border border-line-2 shadow-[inset_0_0_40px_rgba(120,80,30,0.18),0_18px_40px_-22px_rgba(43,32,20,0.6)] sm:h-80">
+            <span className="sunburst absolute inset-0" aria-hidden />
+            {nshow ? (
+              <img
+                key={nhero}
+                src={nhero!}
+                alt={`عکس ${n.title}`}
+                referrerPolicy="no-referrer"
+                onError={() => setNfail(true)}
+                className="fade-in photo-aged absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <span className="absolute inset-0 grid place-items-center text-[96px] emoji-aged">{n.emoji}</span>
+            )}
+            <span className="scanlines absolute inset-0 opacity-25" aria-hidden />
+            <span className="font-type absolute bottom-3 right-4 rounded bg-espresso/85 px-2.5 py-1 text-[10px] tracking-[0.25em] text-gold-2" dir="ltr">
+              {meta.range}
+            </span>
+            <span className="stamp absolute bottom-3 left-4 !text-[11px]" style={{ color: nshow ? "#f3e3bd" : "#8a4b26" }}>
+              {GROUP_LABEL[n.group]}
+            </span>
+            {nshow && (
+              <span className="absolute right-4 top-3 rounded bg-espresso/80 px-2 py-0.5 text-[9.5px] text-paper/75">
+                عکس واقعی · ویکی‌پدیا
+              </span>
+            )}
+            {nphotos.length > 1 && (
+              <>
+                <button
+                  onClick={() => setNmain((nmain + nphotos.length - 1) % nphotos.length)}
+                  aria-label="عکس قبلی"
+                  className="absolute right-2.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-espresso/70 text-paper/90 transition-all hover:bg-espresso active:scale-90"
+                >
+                  <ArrowPrev className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setNmain((nmain + 1) % nphotos.length)}
+                  aria-label="عکس بعدی"
+                  className="absolute left-2.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-espresso/70 text-paper/90 transition-all hover:bg-espresso active:scale-90"
+                >
+                  <ArrowNext className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
+          {nphotos.length > 1 && (
+            <div className="mt-3 flex items-center justify-center gap-2.5">
+              {nphotos.map((p, i) => (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setNfail(false);
+                    setNmain(i);
+                  }}
+                  className={`h-16 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all active:scale-95 ${
+                    i === nmain ? "border-sienna opacity-100 ring-1 ring-sienna" : "border-line-2 opacity-55 hover:opacity-90"
+                  }`}
+                  aria-label={`عکس ${toFa(i + 1)} از ${n.title}`}
+                >
+                  <img src={p} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="p-6 sm:p-8">
@@ -1784,6 +2095,24 @@ const NostalgiaModal: React.FC<{ n: NostItem; list: NostItem[]; onClose: () => v
             <span className="rounded-full border border-line-2 bg-cream px-3 py-1 text-[12px] font-bold text-sienna">
               {meta.fa}
             </span>
+          </div>
+
+          {/* نغمه‌ی خاطره — حال‌وهوای موسیقی همان دهه */}
+          <div className="mt-6 rounded-xl border border-line-2 bg-paper-2/70 p-4">
+            <p className="font-type text-[9px] tracking-[0.3em] text-gold-3" dir="ltr">
+              SOUND OF THE DECADE
+            </p>
+            <h4 className="font-display mt-0.5 text-2xl font-bold text-ink">نغمه‌ی این خاطره</h4>
+            <p className="mt-1 text-[12px] leading-6 text-ink-3">
+              {n.decade === "60"
+                ? "با مایه‌هایی از دستگاه شور؛ همان حال‌وهوای ترانه‌های رادیوی دهه‌ی شصت."
+                : n.decade === "70"
+                ? "با مایه‌های پاپ دهه‌ی هفتاد؛ روزهای نوار کاست و ضبط صوت."
+                : "با مایه‌های الکترونیک دهه‌ی هشتاد؛ از زنگ پلی‌فونیک تا کافه‌نت."}
+            </p>
+            <div className="mt-3">
+              <MotifPlayer motif={motif} light pausedLabel="پخش نغمه‌ی خاطره" playingLabel="توقف نغمه" />
+            </div>
           </div>
 
           {shelfmates.length > 0 && (
@@ -1973,7 +2302,7 @@ async function fetchGameMedia(g: Game): Promise<GameMedia> {
   if (GMEM.has(g.id)) return GMEM.get(g.id)!;
   const out: GameMedia = { hero: null, gallery: [], extract: "" };
   try {
-    const ck = sessionStorage.getItem(`sf-gm:${g.id}`);
+    const ck = sessionStorage.getItem(`sf-gm2:${g.id}`);
     if (ck) {
       const j = JSON.parse(ck) as GameMedia;
       GMEM.set(g.id, j);
@@ -1991,9 +2320,30 @@ async function fetchGameMedia(g: Game): Promise<GameMedia> {
     if (s.ok) {
       const sj = await s.json();
       if (sj?.type !== "disambiguation") {
-        out.extract = ((sj.extract || "") as string).split(/\n/)[0] || "";
         out.hero = sj?.thumbnail?.source ?? sj?.originalimage?.source ?? null;
       }
+    }
+    /* تاریخچه‌ی فارسی از ویکی‌پدیای فارسی */
+    try {
+      const fsr = await fetch(
+        `https://fa.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(g.name)}&limit=1&namespace=0&format=json&origin=*`
+      );
+      let faTitle = "";
+      if (fsr.ok) {
+        const fj = await fsr.json();
+        faTitle = (fj?.[1]?.[0] as string) || "";
+      }
+      if (faTitle) {
+        const fs = await fetch(`https://fa.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(faTitle)}`);
+        if (fs.ok) {
+          const fj2 = await fs.json();
+          if (fj2?.type !== "disambiguation") {
+            out.extract = ((fj2.extract || "") as string).split(/\n/)[0] || "";
+          }
+        }
+      }
+    } catch {
+      /* آفلاین */
     }
     const im = await fetch(
       `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=images&imlimit=20&format=json&origin=*`
@@ -2059,24 +2409,21 @@ export const GamePhoto: React.FC<{ g: Game; className?: string }> = ({ g, classN
   );
 };
 
-/* ─────────────────────── نغمه‌ی ۸ بیتی (سینت‌سایزر) ─────────────────────── */
+/* ─────────────────────── نغمه‌ساز موتیف (هر شیء، ملودی خودش) ─────────────────────── */
 
-const mulberry32 = (a: number) => () => {
-  a |= 0;
-  a = (a + 0x6d2b79f5) | 0;
-  let t = Math.imul(a ^ (a >>> 15), 1 | a);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-
-const ChiptunePlayer: React.FC<{ seed: string }> = ({ seed }) => {
+export const MotifPlayer: React.FC<{
+  motif: Motif;
+  pausedLabel: string;
+  playingLabel: string;
+  light?: boolean;
+}> = ({ motif, pausedLabel, playingLabel, light }) => {
   const [playing, setPlaying] = useState(false);
   const ctxRef = useRef<AudioContext | null>(null);
   const timerRef = useRef<number | null>(null);
 
   const stop = useCallback(() => {
     if (timerRef.current) {
-      window.clearInterval(timerRef.current);
+      window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
     if (ctxRef.current) {
@@ -2087,22 +2434,16 @@ const ChiptunePlayer: React.FC<{ seed: string }> = ({ seed }) => {
   }, []);
 
   useEffect(() => () => stop(), [stop]);
+  useEffect(() => {
+    stop();
+  }, [motif, stop]);
 
   const start = () => {
     const AC: typeof AudioContext =
       window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new AC();
     ctxRef.current = ctx;
-    let h = 0;
-    for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    const rng = mulberry32(h);
-    const root = 40 + Math.floor(rng() * 9);
-    const scale = [0, 3, 5, 7, 10, 12, 15, 17];
-    const tempo = 116 + Math.floor(rng() * 62);
-    const stepDur = 60 / tempo / 2;
-    const melody = Array.from({ length: 32 }, () =>
-      rng() < 0.24 ? -1 : scale[Math.floor(rng() * scale.length)] + (rng() < 0.35 ? 12 : 0)
-    );
+    const stepDur = 60 / motif.tempo / 2;
     const m2f = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
     const blip = (freq: number, t: number, dur: number, type: OscillatorType, vol: number) => {
       const o = ctx.createOscillator();
@@ -2127,25 +2468,28 @@ const ChiptunePlayer: React.FC<{ seed: string }> = ({ seed }) => {
       f.type = "highpass";
       f.frequency.value = 5200;
       const gn = ctx.createGain();
-      gn.gain.setValueAtTime(0.02, t);
+      gn.gain.setValueAtTime(0.018, t);
       gn.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
       src.connect(f);
       f.connect(gn);
       gn.connect(ctx.destination);
       src.start(t);
     };
-    let step = 0;
-    const tick = () => {
-      const t = ctx.currentTime + 0.03;
-      const i = step % 32;
-      const m = melody[i];
-      if (m >= 0) blip(m2f(root + 12 + m), t, stepDur * 0.92, "square", 0.05);
-      if (step % 4 === 0) blip(m2f(root - 12 + (step % 8 === 0 ? 0 : 7)), t, stepDur * 3.4, "triangle", 0.085);
-      if (step % 2 === 0) hat(t);
-      step++;
+    let idx = 0;
+    let beat = 0;
+    const playNext = () => {
+      if (!ctxRef.current) return;
+      const t = ctx.currentTime + 0.02;
+      const [m, len] = motif.notes[idx % motif.notes.length];
+      if (m >= 0) blip(m2f(m), t, len * stepDur * 0.92, motif.wave, 0.05);
+      if (beat % 4 === 0) blip(m2f(motif.root), t, stepDur * 3.4, "triangle", 0.07);
+      if (beat % 8 === 4) blip(m2f(motif.root + 7), t, stepDur * 3.2, "triangle", 0.05);
+      if (motif.hats && beat % 2 === 0) hat(t);
+      idx++;
+      beat++;
+      timerRef.current = window.setTimeout(playNext, len * stepDur * 1000);
     };
-    tick();
-    timerRef.current = window.setInterval(tick, stepDur * 1000);
+    playNext();
     setPlaying(true);
   };
 
@@ -2153,19 +2497,23 @@ const ChiptunePlayer: React.FC<{ seed: string }> = ({ seed }) => {
     <div className="relative w-full">
       <button
         onClick={() => (playing ? stop() : start())}
-        className="flex w-full items-center justify-center gap-2.5 rounded-full border border-gold/50 bg-black/30 px-4 py-2.5 text-[13px] font-bold text-gold-2 transition-all hover:bg-gold/20 active:scale-95"
+        className={`flex w-full items-center justify-center gap-2.5 rounded-full border px-4 py-2.5 text-[13px] font-bold transition-all active:scale-95 ${
+          light
+            ? "border-line-2 bg-cream/90 text-ink-2 hover:border-gold hover:bg-gold/15"
+            : "border-gold/50 bg-black/30 text-gold-2 hover:bg-gold/20"
+        }`}
         aria-pressed={playing}
       >
         {playing ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
-        {playing ? "توقف نغمه" : "پخش نغمه‌ی ۸ بیتی"}
+        {playing ? playingLabel : pausedLabel}
         <span className="mr-1 flex h-4 items-end gap-[3px]" data-playing={playing ? "true" : "false"} aria-hidden>
           {[0, 1, 2, 3, 4].map((i) => (
             <span key={i} className="eq-bar" style={{ animationDelay: `${i * 0.11}s` }} />
           ))}
         </span>
       </button>
-      <p className="mt-1.5 text-center text-[10px] leading-4 text-paper/45">
-        ملودیِ الهام‌گرفته‌ی ساخته‌شده برای همین بازی — موسیقی اصلی، اثرِ آهنگ‌سازانِ خودِ بازی است
+      <p className={`mt-1.5 text-center text-[10px] leading-4 ${light ? "text-ink-3" : "text-paper/45"}`}>
+        بازسازیِ نغمه‌ی این اثر با سینت‌سایزر موزه — نسخه‌ی اصلی، اثرِ آهنگ‌سازانِ خودِ اثر است
       </p>
     </div>
   );
@@ -2197,6 +2545,7 @@ export const GameModal: React.FC<{
   const [media, setMedia] = useState<GameMedia | null>(null);
   const [mainIdx, setMainIdx] = useState(0);
   const [imgFail, setImgFail] = useState(false);
+  const motif = useMemo(() => motifForGame(game), [game]);
 
   useEffect(() => {
     let live = true;
@@ -2309,8 +2658,8 @@ export const GameModal: React.FC<{
                 ))}
               </div>
             )}
-            {/* نغمه‌ی بازی */}
-            <ChiptunePlayer seed={game.id} />
+            {/* نغمه‌ی اختصاصی بازی */}
+            <MotifPlayer motif={motif} pausedLabel="پخش نغمه‌ی بازی" playingLabel="توقف نغمه" />
             <div className="relative grid w-full grid-cols-2 gap-2 text-paper/90">
               <div className="rounded-lg border border-paper/15 bg-black/25 px-3 py-2.5">
                 <p className="text-[10px] text-paper/55">سال انتشار</p>
@@ -2347,13 +2696,18 @@ export const GameModal: React.FC<{
                 <p className="font-type text-[9px] tracking-[0.3em] text-gold-2" dir="ltr">
                   DID YOU KNOW?
                 </p>
+                <h4 className="font-display mt-0.5 text-2xl font-bold text-paper">دانستنی جالب</h4>
                 <p className="mt-1 text-[13.5px] leading-7 text-paper/85">{game.note}</p>
               </div>
             )}
             {media?.extract && (
-              <div className="mt-4 rounded-xl border border-paper/15 bg-black/20 p-4" dir="ltr">
-                <p className="font-type text-[9px] tracking-[0.3em] text-paper/45">HISTORY · WIKIPEDIA (EN)</p>
-                <p className="mt-1.5 text-[13px] leading-6 text-paper/75">{media.extract}</p>
+              <div className="mt-4 rounded-xl border border-paper/15 bg-black/20 p-4">
+                <p className="font-type text-[9px] tracking-[0.3em] text-gold-2/70" dir="ltr">
+                  HISTORY
+                </p>
+                <h4 className="font-display mt-0.5 text-2xl font-bold text-paper">تاریخچه‌ی بازی</h4>
+                <p className="mt-1.5 text-[13.5px] leading-7 text-paper/80">{media.extract}</p>
+                <p className="mt-1.5 text-[10px] text-paper/40">برگرفته از دانشنامه‌ی ویکی‌پدیا</p>
               </div>
             )}
 
@@ -2557,7 +2911,7 @@ export const GamesHallView: React.FC<{ onBack: () => void; onOpenItem: (i: Item)
       </p>
 
       {/* شبکه‌ی کارتریج‌ها */}
-      <div key={`${plat}-${genre}-${sort}-${q}`} className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div key={`${plat}-${genre}-${sort}-${q}`} className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {shown.map((g, i) => {
           const p = platformOf(g.platform);
           return (
@@ -2565,29 +2919,42 @@ export const GamesHallView: React.FC<{ onBack: () => void; onOpenItem: (i: Item)
               key={g.id}
               onClick={() => setOpen(g)}
               className="cart-card rise-in group"
-              style={{ animationDelay: `${Math.min((i % 10) * 40, 400)}ms` }}
+              style={{ animationDelay: `${Math.min((i % 8) * 50, 400)}ms` }}
               aria-label={`پرونده‌ی بازی ${g.name}`}
             >
               <span
-                className="cart-grooves-wrap relative block overflow-hidden p-4 pb-3"
+                className="cart-grooves-wrap relative block overflow-hidden p-5 pb-4"
                 style={{ background: `linear-gradient(160deg, ${p.c}4d 0%, rgba(26,19,11,0.96) 70%)` }}
               >
                 <span className="cart-grooves" aria-hidden />
-                <span className="relative grid h-14 place-items-center overflow-hidden rounded-lg text-5xl drop-shadow-[0_10px_14px_rgba(0,0,0,0.5)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6">
+                <span className="scanlines pointer-events-none absolute inset-0 opacity-25" aria-hidden />
+                <span className="relative grid h-40 place-items-center overflow-hidden rounded-xl text-7xl drop-shadow-[0_14px_20px_rgba(0,0,0,0.55)] transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-2">
                   <span className="emoji-aged">{g.emoji}</span>
                   <GamePhoto g={g} className={`${PHOTO_FADE} z-[1]`} />
                 </span>
-                <span className="font-type relative mt-2 block truncate text-center text-[8.5px] tracking-[0.18em] text-paper/55" dir="ltr">
+                <span className="font-type relative mt-3 block truncate text-center text-[10px] tracking-[0.22em] text-paper/55" dir="ltr">
                   {g.nameEn}
                 </span>
               </span>
-              <span className="relative block border-t-2 border-dashed border-line-2 bg-[linear-gradient(165deg,#f9f0da,#efdfbd)] p-3 text-right">
-                <span className="font-display block truncate text-[19px] font-bold leading-7 text-ink transition-colors group-hover:text-sienna">
+              <span className="relative block border-t-2 border-dashed border-line-2 bg-[linear-gradient(165deg,#f9f0da,#efdfbd)] p-4 text-right">
+                <span className="font-display block truncate text-2xl font-bold leading-8 text-ink transition-colors group-hover:text-sienna">
                   {g.name}
                 </span>
-                <span className="mt-1 flex items-center gap-1.5 text-[10.5px] font-bold text-ink-3">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: p.c }} />
-                  {p.fa} · {toFa(g.year)} · {g.genre}
+                <span className="mt-1.5 line-clamp-2 block min-h-10 text-[12.5px] leading-5 text-ink-2">{g.desc}</span>
+                <span className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 rounded-full border border-line-2 bg-cream/80 px-2.5 py-0.5 text-[11px] font-bold text-ink-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: p.c }} />
+                    {p.fa}
+                  </span>
+                  <span className="rounded-full border border-line-2 bg-cream/80 px-2.5 py-0.5 font-type text-[11px] font-bold text-ink-2">
+                    {toFa(g.year)}
+                  </span>
+                  <span className="rounded-full border border-line-2 bg-cream/80 px-2.5 py-0.5 text-[11px] font-bold text-ink-3">
+                    {g.genre}
+                  </span>
+                  <span className="mr-auto flex items-center gap-1 text-[11px] font-bold text-gold-3 opacity-0 transition-all duration-300 group-hover:opacity-100">
+                    پرونده <ArrowNext className="h-3 w-3" />
+                  </span>
                 </span>
               </span>
             </button>
