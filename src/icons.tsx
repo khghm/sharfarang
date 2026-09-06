@@ -150,9 +150,47 @@ export const CornerOrnament: React.FC<{ className?: string }> = ({ className }) 
   </svg>
 );
 
+export const ArcadeIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="8.2" r="2.6" />
+    <path d="M12 10.8v2.4" />
+    <path d="M4.5 16.5c0-1.9 3.4-3.3 7.5-3.3s7.5 1.4 7.5 3.3-3.4 3.3-7.5 3.3-7.5-1.4-7.5-3.3Z" />
+    <path d="M7.8 15.9l-1.6 1.6m9.6-1.6 1.6 1.6" />
+  </svg>
+);
+
+export const ToysIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <path d="M12 2.8 20 9l-8 6.2L4 9l8-6.2Z" />
+    <path d="M12 15.2V19" />
+    <circle cx="12" cy="20.4" r="1.3" />
+  </svg>
+);
+
+export const LuxuryIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <path d="M4 16.5a8.5 8.5 0 1 1 16 0" />
+    <path d="M12 16.5l3.6-5" />
+    <circle cx="12" cy="16.5" r="1.2" fill="currentColor" stroke="none" />
+    <path d="M4.5 12.5l1.4.6M12 7.5v1.6M19.5 12.5l-1.4.6" />
+  </svg>
+);
+
+export const StorageIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <ellipse cx="12" cy="6" rx="7.5" ry="2.8" />
+    <path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6" />
+    <path d="M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6" />
+  </svg>
+);
+
 export const CATEGORY_ICONS: Record<string, React.FC<IconProps>> = {
   gaming: GameIcon,
+  arcade: ArcadeIcon,
+  toys: ToysIcon,
   auto: AutoIcon,
+  luxury: LuxuryIcon,
+  storage: StorageIcon,
   comp: CompIcon,
   av: AvIcon,
   comm: CommIcon,

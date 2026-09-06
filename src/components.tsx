@@ -11,11 +11,14 @@ import {
   StatusId,
   WINDOW,
   catById,
+  contemporaries,
   plaqueNo,
   searchItems,
   toFa,
+  triviaOf,
   type Item,
 } from "./data";
+import { DECADES, GROUPS, NOSTALGIA, type DecadeId, type NostalgiaGroup } from "./nostalgia";
 import {
   ArrowNext,
   ArrowPrev,
@@ -323,6 +326,171 @@ export const SearchBox: React.FC<{ size?: "lg" | "sm"; onOpen: (i: Item) => void
   );
 };
 
+/* ─────────────────────── عکس واقعی اشیاء (ویکی‌پدیا) ─────────────────────── */
+
+const WIKI_OVERRIDES: Record<string, string> = {
+  crttv: "Cathode-ray tube",
+  tuberadio: "Radio",
+  mechanicalmouse: "Computer mouse",
+  punchcard: "Punched card",
+  telegraph: "Electrical telegraph",
+  sewingmachine: "Sewing machine",
+  pocketcalc: "Calculator",
+  "toyota-fj40": "Toyota Land Cruiser (J40)",
+  "vw-type2": "Volkswagen Type 2",
+  "lada-2101": "VAZ-2101",
+  "willys-jeep": "Willys MB",
+  "mercedes-300sl": "Mercedes-Benz 300 SL",
+  "silver-ghost": "Rolls-Royce Silver Ghost",
+  polaroid: "Polaroid",
+  "crt-monitor": "Computer monitor",
+  ps1: "PlayStation",
+  "sega-master-system": "Master System",
+  "sega-game-gear": "Game Gear",
+  "pc-engine": "PC Engine",
+  "3do": "3DO Interactive Multiplayer",
+  wonderswan: "WonderSwan",
+  "gameboy-advance": "Game Boy Advance",
+  "sega-dreamcast": "Dreamcast",
+  "magnavox-odyssey": "Magnavox Odyssey",
+  delorean: "DeLorean DMC-12",
+  "apple-ii": "Apple II",
+  "ibm-pc-5150": "IBM Personal Computer",
+  "dialup-modem": "Dial-up Internet access",
+  "apple-newton": "Apple Newton",
+  "psion-organizer": "Psion Organiser",
+  teletype: "Teleprinter",
+  "paper-tape": "Punched tape",
+  "cd-writer": "CD-R",
+  "magnetic-tape": "Magnetic tape",
+  "core-memory": "Magnetic-core memory",
+  "zip-drive": "Zip drive",
+  "univac-1": "UNIVAC I",
+  "flash-bulb": "Flash (photography)",
+  "darkroom-enlarger": "Photographic enlarger",
+  "8mm-projector": "8 mm film",
+  "wax-cylinder": "Phonograph cylinder",
+  "radio-gram-console": "Radiogram (furniture)",
+  "nmt-network": "Nordic Mobile Telephone",
+  wap: "Wireless Application Protocol",
+  "ham-radio": "Amateur radio",
+  "cb-radio": "Citizens band radio",
+  "iridium-phone": "Satellite phone",
+  "karaoke-machine": "Karaoke",
+  "vhsc-camcorder": "VHS-C",
+  hi8: "Hi8",
+  super8: "Super 8 film",
+  nickelodeon: "Nickelodeon (movie theater)",
+  "shellac-78": "Gramophone record",
+  "glass-plate": "Photographic plate",
+  "rolleiflex-tlr": "Rolleiflex",
+  "leica-rangefinder": "Leica III",
+  "nikon-f-slr": "Nikon F",
+  "film-110": "110 film",
+  "film-135": "135 film",
+  "aps-film": "Advanced Photo System",
+  instamatic: "Instamatic",
+  "stencil-duplicator": "Duplicating machine",
+  "wax-seal": "Sealing wax",
+  "ledger-book": "Ledger",
+  "filing-cabinet": "Filing cabinet",
+  "crank-sharpener": "Pencil sharpener",
+  "typewriter-ribbon": "Typewriter ribbon",
+  "mangal": "Brazier",
+  "charcoal-iron": "Ironing",
+  "oil-radiator": "Oil heater",
+  "early-vacuum": "Vacuum cleaner",
+  "vintage-toaster": "Toaster",
+  "hand-washer": "Washing machine",
+  "cast-iron-range": "Kitchen stove",
+  "meat-grinder": "Meat grinder",
+  "egg-beater": "Egg beater",
+  "birdcage": "Birdcage",
+  "thonet-chair": "Thonet",
+  dynatac: "Motorola DynaTAC",
+  "phone-book": "Telephone directory",
+  "telegram-service": "Telegram",
+  "tv-remote": "Remote control",
+  "dot-matrix-printer": "Dot matrix printing",
+  "daisy-wheel": "Daisy wheel printing",
+};
+
+const PHOTO_MEM = new Map<string, string | null>();
+const cleanEn = (s: string) => s.replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+
+async function fetchPhoto(item: Item): Promise<string | null> {
+  if (PHOTO_MEM.has(item.id)) return PHOTO_MEM.get(item.id) ?? null;
+  let url: string | null = null;
+  try {
+    const cached = sessionStorage.getItem(`sf-photo:${item.id}`);
+    if (cached) {
+      url = cached === "0" ? null : cached;
+    } else {
+      let title = WIKI_OVERRIDES[item.id] ?? null;
+      if (!title) {
+        const q = cleanEn(item.nameEn);
+        const r = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=1&namespace=0&format=json&origin=*`
+        );
+        if (r.ok) {
+          const j = await r.json();
+          title = (j?.[1]?.[0] as string) ?? null;
+        }
+      }
+      if (title) {
+        const r2 = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`
+        );
+        if (r2.ok) {
+          const s = await r2.json();
+          url = s?.thumbnail?.source ?? s?.originalimage?.source ?? null;
+        }
+      }
+      sessionStorage.setItem(`sf-photo:${item.id}`, url ?? "0");
+    }
+  } catch {
+    url = null;
+  }
+  PHOTO_MEM.set(item.id, url);
+  return url;
+}
+
+export const ItemPhoto: React.FC<{ item: Item; className?: string }> = ({ item, className = "" }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  const { ref, inView } = useInView<HTMLSpanElement>(0.05);
+  useEffect(() => {
+    if (!inView) return;
+    let live = true;
+    fetchPhoto(item).then((u) => {
+      if (live) setSrc(u);
+    });
+    return () => {
+      live = false;
+    };
+  }, [inView, item]);
+  return (
+    <span ref={ref} className={className} aria-hidden>
+      {src && (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="photo-aged h-full w-full rounded-[inherit] object-cover"
+        />
+      )}
+    </span>
+  );
+};
+
+const PHOTO_OVERLAY =
+  "absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-700 has-[img]:opacity-100";
+
+const faToEn = (s: string) =>
+  s
+    .replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
 /* ─────────────────────── کارت شیء ─────────────────────── */
 
 export const ItemCard: React.FC<{
@@ -390,8 +558,9 @@ export const ItemCard: React.FC<{
       >
         {saveBtn}
         <div className="flex items-center gap-4 p-4">
-          <span className="grid h-20 w-20 shrink-0 place-items-center rounded-full border-[3px] border-double border-gold-3 bg-[radial-gradient(circle_at_50%_35%,#fdf6e2,#e7d3a6_80%)] text-4xl shadow-[inset_0_3px_12px_rgba(120,80,30,0.3)] emoji-aged transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
-            {item.image}
+          <span className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-double border-gold-3 bg-[radial-gradient(circle_at_50%_35%,#fdf6e2,#e7d3a6_80%)] shadow-[inset_0_3px_12px_rgba(120,80,30,0.3)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+            <span className="text-4xl emoji-aged">{item.image}</span>
+            <ItemPhoto item={item} className={PHOTO_OVERLAY} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
@@ -439,8 +608,9 @@ export const ItemCard: React.FC<{
         </span>
       </div>
       <div className="px-5 pt-4">
-        <span className="mx-auto grid h-[84px] w-[84px] place-items-center rounded-full border-[3px] border-double border-gold-3 bg-[radial-gradient(circle_at_50%_35%,#fdf6e2,#e7d3a6_80%)] text-[42px] leading-none shadow-[inset_0_4px_14px_rgba(120,80,30,0.3)] emoji-aged transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3">
-          {item.image}
+        <span className="relative mx-auto grid h-[84px] w-[84px] place-items-center overflow-hidden rounded-full border-[3px] border-double border-gold-3 bg-[radial-gradient(circle_at_50%_35%,#fdf6e2,#e7d3a6_80%)] shadow-[inset_0_4px_14px_rgba(120,80,30,0.3)] transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3">
+          <span className="text-[42px] leading-none emoji-aged">{item.image}</span>
+          <ItemPhoto item={item} className={PHOTO_OVERLAY} />
         </span>
         <h3 className="font-display mt-3 text-center text-[26px] font-bold leading-9 text-ink transition-colors group-hover:text-sienna">
           {item.name}
@@ -469,8 +639,9 @@ export const PortholeStrip: React.FC<{ items: Item[]; onOpen: (i: Item) => void 
   <div className="flex flex-wrap items-center justify-center gap-4 pb-6 sm:gap-6">
     {items.map((i) => (
       <button key={i.id} onClick={() => onOpen(i)} className="group relative" aria-label={i.name}>
-        <span className="grid h-16 w-16 place-items-center rounded-full border-4 border-double border-gold-3 bg-[radial-gradient(circle_at_50%_35%,#fdf6e2,#e7d3a6_80%)] text-3xl shadow-[inset_0_4px_16px_rgba(120,80,30,0.35),0_8px_18px_-10px_rgba(43,32,20,0.5)] emoji-aged transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 sm:h-20 sm:w-20 sm:text-4xl">
-          {i.image}
+        <span className="relative grid h-16 w-16 place-items-center overflow-hidden rounded-full border-4 border-double border-gold-3 bg-[radial-gradient(circle_at_50%_35%,#fdf6e2,#e7d3a6_80%)] shadow-[inset_0_4px_16px_rgba(120,80,30,0.35),0_8px_18px_-10px_rgba(43,32,20,0.5)] transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 sm:h-20 sm:w-20">
+          <span className="text-3xl emoji-aged sm:text-4xl">{i.image}</span>
+          <ItemPhoto item={i} className={PHOTO_OVERLAY} />
         </span>
         <span className="pointer-events-none absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-2.5 py-0.5 text-[10px] font-bold text-paper opacity-0 transition-all duration-300 group-hover:-bottom-4 group-hover:opacity-100">
           {i.name}
@@ -505,7 +676,7 @@ export const TickerBar: React.FC<{ onOpen: (i: Item) => void }> = ({ onOpen }) =
     </div>
   );
   return (
-    <div className="relative z-10 border-y border-gold/25 bg-espresso">
+    <div className="relative z-10 overflow-hidden border-y border-gold/25 bg-espresso">
       <div className="ticker-track">
         {row("a", false)}
         {row("b", true)}
@@ -569,6 +740,15 @@ const DOT_COLORS: Record<StatusId, string> = {
   rare: "#6f9c8a",
 };
 
+const CHAPTERS = [
+  { y: 1805, fa: "عصر اختراع" },
+  { y: 1865, fa: "عصر بخار و برق" },
+  { y: 1925, fa: "عصر رادیو" },
+  { y: 1955, fa: "عصر تلویزیون" },
+  { y: 1978, fa: "عصر دیجیتال" },
+  { y: 2002, fa: "عصر اینترنت" },
+];
+
 const ERAS = [
   { fa: "پیش از ۱۹۰۰", y: 1860 },
   { fa: "۱۹۰۰ تا ۱۹۴۵", y: 1922 },
@@ -585,6 +765,8 @@ export const TimelineSection: React.FC<{
   const [center, setCenter] = useState(1960);
   const [playing, setPlaying] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [hover, setHover] = useState<Item | null>(null);
+  const decade = Math.floor(center / 10) * 10;
   const MIN = MIN_YEAR + WINDOW / 2;
   const MAX = MAX_YEAR - WINDOW / 2;
 
@@ -661,21 +843,39 @@ export const TimelineSection: React.FC<{
       </div>
 
       {/* خط‌کش قرن‌ها */}
-      <div className="relative mt-8 h-44 overflow-hidden rounded-xl border border-paper/15 bg-black/25">
-        {/* ستون‌های دهه‌ها */}
-        <div className="absolute inset-x-3 bottom-9 top-3">
-          {decades.map(({ d, n }) => {
+      <div
+        className="relative mt-8 h-48 overflow-hidden rounded-xl border border-paper/15 bg-black/25"
+        onMouseLeave={() => setHover(null)}
+      >
+        {/* فصل‌های تاریخ */}
+        <div className="absolute inset-x-3 top-1.5 h-6">
+          {CHAPTERS.map((c) => (
+            <span
+              key={c.y}
+              className="absolute hidden translate-x-1/2 whitespace-nowrap rounded-full border border-gold/25 bg-black/30 px-2 py-0.5 text-[9px] font-bold text-gold-2/80 sm:block"
+              style={{ right: `${pct(c.y)}%` }}
+            >
+              {c.fa}
+            </span>
+          ))}
+        </div>
+        {/* ستون‌های دهه‌ها + نقاط */}
+        <div className="absolute inset-x-3 bottom-9 top-9">
+          {decades.map(({ d, n }, bi) => {
             const inWin = !showAll && d + 10 > from && d < to;
             return (
               <div
                 key={d}
                 title={`دهه‌ی ${toFa(d)} · ${toFa(n)} شیء`}
-                className="absolute bottom-0 rounded-t-[3px] transition-all duration-300"
+                className="grow-y absolute bottom-0 rounded-t-[3px] transition-all duration-300"
                 style={{
                   right: `${pct(d)}%`,
                   width: `${(10 / (MAX_YEAR - MIN_YEAR)) * 100}%`,
                   height: `${10 + (n / maxN) * 88}%`,
-                  background: inWin ? "linear-gradient(180deg, rgba(224,118,74,0.85), rgba(185,138,47,0.75))" : "rgba(217,178,95,0.16)",
+                  animationDelay: `${Math.min(bi * 25, 500)}ms`,
+                  background: inWin
+                    ? "linear-gradient(180deg, rgba(224,118,74,0.9), rgba(185,138,47,0.75))"
+                    : "rgba(217,178,95,0.16)",
                 }}
               />
             );
@@ -687,6 +887,8 @@ export const TimelineSection: React.FC<{
               style={{ right: `${pct(from)}%`, width: `${pct(to) - pct(from)}%` }}
             />
           )}
+          {/* سرِ متحرک زمان */}
+          {!showAll && <span className="playhead" style={{ right: `${pct(center)}%` }} aria-hidden />}
           {/* نقطه‌ی اشیاء */}
           {ITEMS.map((i) => {
             const inWin = showAll || Math.abs(i.year - center) <= WINDOW / 2;
@@ -694,6 +896,8 @@ export const TimelineSection: React.FC<{
               <button
                 key={i.id}
                 onClick={() => onOpen(i)}
+                onMouseEnter={() => setHover(i)}
+                onFocus={() => setHover(i)}
                 title={`${i.name} · ${toFa(i.year)}`}
                 aria-label={i.name}
                 className="dot-item"
@@ -702,18 +906,35 @@ export const TimelineSection: React.FC<{
                   top: dotTop(i.id),
                   background: DOT_COLORS[i.status],
                   opacity: inWin ? 1 : 0.18,
-                  transform: `translateX(50%) scale(${inWin ? 1 : 0.7})`,
+                  transform: `translateX(50%) scale(${hover?.id === i.id ? 1.8 : inWin ? 1 : 0.7})`,
+                  boxShadow: hover?.id === i.id ? `0 0 0 5px ${DOT_COLORS[i.status]}33` : undefined,
                 }}
               />
             );
           })}
+          {/* پیش‌نمایش نقطه‌ی زیرِ نشانگر */}
+          {hover && (
+            <div
+              className="fade-in pointer-events-none absolute z-20 w-48 translate-x-1/2 rounded-lg border border-gold/40 bg-espresso p-2.5 shadow-[0_16px_32px_rgba(0,0,0,0.55)]"
+              style={{ right: `${pct(hover.year)}%`, top: "-0.4rem" }}
+            >
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl emoji-aged">{hover.image}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-bold text-paper">{hover.name}</span>
+                  <span className="font-type block text-[10px] text-gold-2">{toFa(hover.year)} · برای پرونده کلیک کنید</span>
+                </span>
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: DOT_COLORS[hover.status] }} />
+              </div>
+            </div>
+          )}
         </div>
         {/* برچسب دهه‌ها */}
         <div className="absolute inset-x-3 bottom-1.5 h-6">
           {[1800, 1820, 1840, 1860, 1880, 1900, 1920, 1940, 1960, 1980, 2000, 2020].map((y) => (
             <span
               key={y}
-              className="font-type absolute -translate-y-0 translate-x-1/2 text-[9px] tracking-wider text-paper/50"
+              className="font-type absolute translate-x-1/2 text-[9px] tracking-wider text-paper/50"
               style={{ right: `${pct(y)}%` }}
               dir="ltr"
             >
@@ -741,7 +962,15 @@ export const TimelineSection: React.FC<{
         />
         <div className="shrink-0 text-center sm:text-left">
           <p className="font-display text-3xl font-bold leading-none text-gold-2">
-            {showAll ? "همه‌ی دوران‌ها" : `${toFa(from)} تا ${toFa(to)}`}
+            {showAll ? (
+              <span key="all" className="decade-flip">همه‌ی دوران‌ها</span>
+            ) : (
+              <>
+                <span key={`d-${decade}`} className="decade-flip">دهه‌ی {toFa(decade)}</span>
+                <span className="mx-1.5 text-lg text-paper/50">·</span>
+                <span className="text-2xl">{toFa(from)} تا {toFa(to)}</span>
+              </>
+            )}
           </p>
           <p className="font-type mt-1 text-[10px] tracking-[0.25em] text-paper/50" dir="ltr">
             {showAll ? "FULL COLLECTION" : `${toFa(visible.length)} OBJECTS IN WINDOW`}
@@ -805,6 +1034,8 @@ export const ItemModal: React.FC<{
   const cat = catById(item.category);
   const CatIcon = CATEGORY_ICONS[cat.icon];
   const panelRef = useRef<HTMLDivElement>(null);
+  const [birth, setBirth] = useState("");
+  const peers = contemporaries(item, 4);
 
   const related = useMemo(
     () =>
@@ -859,8 +1090,9 @@ export const ItemModal: React.FC<{
             <span className="font-type relative text-[10px] tracking-[0.3em] text-gold-2/80" dir="ltr">
               EXHIBIT № {plaqueNo(idx + 1)}
             </span>
-            <span className="animate-bob relative text-[88px] leading-none drop-shadow-[0_18px_28px_rgba(0,0,0,0.55)] emoji-aged">
-              {item.image}
+            <span className="relative grid h-40 w-40 place-items-center overflow-hidden rounded-full border-4 border-double border-gold/40 bg-espresso-2 shadow-[0_24px_50px_-18px_rgba(0,0,0,0.8)]">
+              <span className="animate-bob text-7xl leading-none emoji-aged">{item.image}</span>
+              <ItemPhoto item={item} className={PHOTO_OVERLAY} />
             </span>
             <span key={`st-${item.id}`} className="stamp stamp-in relative !text-[13px]" style={{ color: "#e8c07a" }}>
               {STATUS[item.status].fa}
@@ -920,6 +1152,73 @@ export const ItemModal: React.FC<{
                 </div>
               ))}
             </div>
+
+            {/* دانستنی‌های جالب */}
+            {triviaOf(item.id) && (
+              <div className="mt-6 rounded-xl border border-gold/40 bg-gold/10 p-4">
+                <p className="font-type text-[9px] tracking-[0.3em] text-gold-3" dir="ltr">
+                  DID YOU KNOW?
+                </p>
+                <h4 className="font-display mt-0.5 text-2xl font-bold text-ink">دانستنی‌های جالب</h4>
+                <ul className="mt-2.5 space-y-2">
+                  {triviaOf(item.id)!.map((t, i) => (
+                    <li key={i} className="flex gap-2 text-[13px] leading-6 text-ink-2">
+                      <span className="mt-0.5 shrink-0 text-gold-3">✦</span>
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* سن‌سنج خاطره */}
+            <div className="mt-6 rounded-xl border border-line bg-paper-2/60 p-4">
+              <h4 className="font-display text-2xl font-bold text-ink">سن‌سنج خاطره</h4>
+              <p className="mt-1 text-[12.5px] leading-6 text-ink-3">
+                سال تولدتان (شمسی) را بنویسید تا بگوییم این شیء چه نسبتی با شما دارد:
+              </p>
+              <input
+                value={birth}
+                onChange={(e) => setBirth(e.target.value)}
+                placeholder="مثلاً ۱۳۶۵"
+                inputMode="numeric"
+                maxLength={4}
+                className="mt-2.5 w-32 rounded-lg border border-line-2 bg-cream px-3 py-2 text-center text-[15px] font-bold text-ink outline-none transition-all focus:border-gold focus:shadow-[0_0_0_3px_rgba(185,138,47,0.15)]"
+                aria-label="سال تولد شمسی"
+              />
+              {(() => {
+                const n = parseInt(faToEn(birth).replace(/\D/g, ""), 10);
+                if (!n || n < 1300 || n > 1405) return null;
+                const diff = n + 621 - item.year;
+                return (
+                  <p className="rise-in mt-2.5 rounded-lg bg-cream px-3 py-2 text-[13px] font-bold leading-6 text-sienna">
+                    {diff >= 0
+                      ? `وقتی در سال ${toFa(n)} به دنیا آمدید، این شیء ${toFa(diff)} ساله بود${diff === 0 ? "؛ درست هم‌سن خودتان!" : "!"}`
+                      : `این شیء ${toFa(-diff)} سال بعد از شما متولد شد؛ شانس نیاوردید با هم بزرگ شوید.`}
+                  </p>
+                );
+              })()}
+            </div>
+
+            {/* هم‌دوره‌ها */}
+            {peers.length > 0 && (
+              <div className="mt-6">
+                <p className="text-[12px] font-bold text-ink-3">هم‌دوره‌های این شیء در سایر تالارها (±۱۰ سال):</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {peers.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => onOpenItem(r)}
+                      className="flex items-center gap-2 rounded-full border border-line-2 bg-cream/70 px-3 py-1.5 text-[12.5px] font-bold text-ink-2 transition-all hover:-translate-y-0.5 hover:border-sienna hover:text-sienna active:scale-95"
+                    >
+                      <span className="text-base">{r.image}</span>
+                      {r.name}
+                      <span className="font-type text-[10px] text-ink-3">{toFa(r.year)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* تایم‌لاین نسل‌ها */}
             <Reveal className="mt-8">
@@ -1197,8 +1496,13 @@ export const IntroOverlay: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   const TITLE = "شهرفرنگ";
   const [n, setN] = useState(0);
   const [phase, setPhase] = useState<0 | 1 | 2>(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    if (reduced) {
+      const t = window.setTimeout(onDone, 80);
+      return () => window.clearTimeout(t);
+    }
     if (phase === 0) {
       if (n < TITLE.length) {
         const t = window.setTimeout(() => setN(n + 1), 115);
@@ -1213,7 +1517,7 @@ export const IntroOverlay: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     }
     const t = window.setTimeout(onDone, 950);
     return () => window.clearTimeout(t);
-  }, [phase, n, onDone]);
+  }, [phase, n, onDone, reduced]);
 
   const doorStyle: React.CSSProperties = {
     backgroundImage: "repeating-linear-gradient(90deg, rgba(185,138,47,0.07) 0 2px, transparent 2px 30px)",
@@ -1244,6 +1548,106 @@ export const IntroOverlay: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       </div>
       <div className="door-panel absolute inset-y-0 right-0 w-[51%] border-l-2 border-gold/40 bg-espresso" data-side="right" style={doorStyle} />
       <div className="door-panel absolute inset-y-0 left-0 w-[51%] border-r-2 border-gold/40 bg-espresso" data-side="left" style={doorStyle} />
+    </div>
+  );
+};
+
+/* ─────────────────────── اتاق خاطره‌ی دهه‌ها ─────────────────────── */
+
+export const NostalgiaSection: React.FC = () => {
+  const [dec, setDec] = useState<DecadeId>("60");
+  const [group, setGroup] = useState<"all" | NostalgiaGroup>("all");
+  const meta = DECADES.find((d) => d.id === dec)!;
+  const items = NOSTALGIA.filter((n) => n.decade === dec && (group === "all" || n.group === group));
+
+  return (
+    <div>
+      {/* تب‌های دهه */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {DECADES.map((d) => (
+          <button
+            key={d.id}
+            onClick={() => setDec(d.id)}
+            aria-pressed={dec === d.id}
+            className={`font-display rounded-xl border-2 px-6 py-3 text-2xl font-bold transition-all duration-300 active:scale-95 sm:px-8 sm:text-3xl ${
+              dec === d.id
+                ? "-rotate-1 border-sienna bg-sienna text-cream shadow-[0_16px_32px_-12px_rgba(168,67,31,0.65)]"
+                : "border-line-2 bg-cream/70 text-ink-2 hover:-translate-y-1 hover:border-sienna hover:text-sienna"
+            }`}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
+      <p key={`tag-${dec}`} className="rise-in mt-4 text-center text-[14px] text-ink-3">
+        <span className="font-type text-[11px] tracking-widest text-gold-3">{meta.years}</span>
+        <span className="mx-2 text-line-2">·</span>
+        {meta.tagline}
+      </p>
+
+      {/* فیلتر قفسه‌ها */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <button
+          onClick={() => setGroup("all")}
+          className={`rounded-full border px-4 py-1.5 text-[13px] font-bold transition-all active:scale-95 ${
+            group === "all"
+              ? "border-ink bg-ink text-paper"
+              : "border-line-2 bg-cream/60 text-ink-2 hover:border-ink"
+          }`}
+        >
+          همه‌ی قفسه‌ها
+        </button>
+        {GROUPS.map((g) => {
+          const active = group === g.id;
+          const count = NOSTALGIA.filter((n) => n.decade === dec && n.group === g.id).length;
+          return (
+            <button
+              key={g.id}
+              onClick={() => setGroup(active ? "all" : g.id)}
+              className={`rounded-full border px-4 py-1.5 text-[13px] font-bold transition-all active:scale-95 ${
+                active
+                  ? "border-gold-3 bg-gold-3 text-cream"
+                  : "border-line-2 bg-cream/60 text-ink-2 hover:border-gold-3 hover:text-gold-3"
+              }`}
+            >
+              {g.fa} · {toFa(count)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* کارت‌های خاطره */}
+      <div key={`${dec}-${group}`} className="mt-9 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {items.map((n, i) => (
+          <div
+            key={n.id}
+            className={`rise-in aged-card group relative overflow-hidden rounded-xl p-5 transition-transform duration-300 hover:z-10 hover:-translate-y-1.5 hover:rotate-0 ${
+              i % 2 ? "rotate-[0.7deg]" : "-rotate-[0.7deg]"
+            }`}
+            style={{ animationDelay: `${i * 45}ms` }}
+          >
+            <span className="tape" aria-hidden />
+            <div className="flex items-start justify-between">
+              <span className="text-4xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+                {n.emoji}
+              </span>
+              <span className="font-type rounded border border-line-2 bg-cream/70 px-2 py-0.5 text-[11px] font-bold text-ink-2">
+                {n.year}
+              </span>
+            </div>
+            <h3 className="font-display mt-3 text-2xl font-bold leading-8 text-ink transition-colors group-hover:text-sienna">
+              {n.title}
+            </h3>
+            <p className="mt-1.5 text-[12.5px] leading-6 text-ink-2">{n.text}</p>
+            <span className="mt-3 inline-block rounded-full bg-ink/5 px-2.5 py-0.5 text-[10.5px] font-bold text-ink-3">
+              {GROUPS.find((g) => g.id === n.group)!.fa}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-7 text-center text-[12px] text-ink-3">
+        چیزی از قلم افتاده؟ پایین‌تر در دفتر یادگاری بنویسید؛ نگهبان موزه می‌خواند.
+      </p>
     </div>
   );
 };

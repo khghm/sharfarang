@@ -40,6 +40,7 @@ import {
   ItemCard,
   ItemModal,
   LegendaryStrip,
+  NostalgiaSection,
   PortholeStrip,
   Reveal,
   ScrollProgress,
@@ -277,7 +278,10 @@ const App: React.FC = () => {
   const goAnchor = (id: string) => {
     click();
     setView({ t: "home" });
-    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }), 90);
+    setTimeout(
+      () => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" }),
+      90
+    );
   };
 
   const randomTicket = () => {
@@ -335,6 +339,9 @@ const App: React.FC = () => {
           <nav className="hidden shrink-0 items-center gap-1 md:flex">
             <button onClick={() => goAnchor("halls")} className="rounded-full px-3 py-1.5 text-[13px] font-bold text-ink-2 transition-colors hover:bg-paper-2 hover:text-sienna">
               تالارها
+            </button>
+            <button onClick={() => goAnchor("decades")} className="rounded-full px-3 py-1.5 text-[13px] font-bold text-ink-2 transition-colors hover:bg-paper-2 hover:text-sienna">
+              دهه‌ها
             </button>
             <button onClick={() => goAnchor("timeline")} className="rounded-full px-3 py-1.5 text-[13px] font-bold text-ink-2 transition-colors hover:bg-paper-2 hover:text-sienna">
               تایم‌لاین
@@ -491,7 +498,7 @@ const App: React.FC = () => {
           {/* ═══ تالارها ═══ */}
           <section id="halls" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 sm:py-20">
             <SectionHead no="۰۱" title="تالارهای موزه" en="THE HALLS" />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {CATEGORIES.map((c, idx) => {
                 const Icon = CATEGORY_ICONS[c.icon];
                 const count = ITEMS.filter((i) => i.category === c.id).length;
@@ -532,18 +539,24 @@ const App: React.FC = () => {
             <LegendaryStrip items={LEGENDARY} favs={favs} onOpen={(x) => openItem(x, LEGENDARY)} onToggleSave={toggleSave} />
           </section>
 
+          {/* ═══ اتاق خاطره‌ی دهه‌ها ═══ */}
+          <section id="decades" className="mx-auto max-w-7xl scroll-mt-20 px-4 pb-16 sm:px-6 sm:pb-20">
+            <SectionHead no="۰۳" title="اتاق خاطره‌ی دهه‌ها" en="MEMORY ROOM · 60s–80s" />
+            <NostalgiaSection />
+          </section>
+
           {/* ═══ تایم‌لاین سراسری ═══ */}
           <section id="timeline" className="dark-panel relative scroll-mt-20 overflow-hidden py-16 text-paper sm:py-20">
             <StarBurst className="pointer-events-none absolute -left-24 top-10 h-72 w-72 text-gold/10" />
             <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-              <SectionHead no="۰۳" title="سفر در زمان" en="THE GRAND TIMELINE" dark />
+              <SectionHead no="۰۴" title="سفر در زمان" en="THE GRAND TIMELINE" dark />
               <TimelineSection onOpen={(i) => openItem(i)} favs={favs} onToggleSave={toggleSave} />
             </div>
           </section>
 
           {/* ═══ دفتر یادگاری ═══ */}
           <section id="guestbook" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 sm:py-20">
-            <SectionHead no="۰۴" title="دفتر یادگاری" en="THE GUESTBOOK" />
+            <SectionHead no="۰۵" title="دفتر یادگاری" en="THE GUESTBOOK" />
             <Guestbook onStamp={thunk} />
           </section>
 
@@ -551,7 +564,7 @@ const App: React.FC = () => {
           <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 sm:pb-20">
             <div className="grid gap-12 md:grid-cols-2">
               <Reveal>
-                <SectionHead no="۰۵" title="درباره‌ی شهرفرنگ" en="ABOUT THE MUSEUM" />
+                <SectionHead no="۰۶" title="درباره‌ی شهرفرنگ" en="ABOUT THE MUSEUM" />
                 <blockquote className="font-display border-s-4 border-sienna ps-5 text-3xl font-medium leading-[1.9] text-ink sm:text-4xl">
                   «هر چیزی که اینجا نشسته، روزی صدای زندگی بود؛ حالا فقط منتظر است کسی دوباره صدایش بزند.»
                 </blockquote>
