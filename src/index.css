@@ -1,0 +1,549 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Markazi Text", "Vazirmatn", serif;
+  --font-body: "Vazirmatn", "Segoe UI", sans-serif;
+  --font-type: "Courier Prime", "Courier New", monospace;
+
+  --color-paper: #f6eedb;
+  --color-paper-2: #efe3c7;
+  --color-paper-3: #e5d3ab;
+  --color-cream: #fbf5e6;
+  --color-ink: #2b2014;
+  --color-ink-2: #5c4a30;
+  --color-ink-3: #8a744f;
+  --color-espresso: #1e150d;
+  --color-espresso-2: #2c2013;
+  --color-sienna: #a8431f;
+  --color-sienna-2: #c65c2c;
+  --color-gold: #b98a2f;
+  --color-gold-2: #d9b25f;
+  --color-gold-3: #8a6420;
+  --color-olive: #6d7448;
+  --color-moss: #3f5d50;
+  --color-line: #d8c49a;
+  --color-line-2: #c3aa78;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  overflow-x: clip;
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgba(185, 138, 47, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 8% 12%, rgba(168, 67, 31, 0.07), transparent 55%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: #fff8ea;
+}
+
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: var(--color-paper-2); }
+::-webkit-scrollbar-thumb { background: #b39a6b; border-radius: 6px; border: 3px solid var(--color-paper-2); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold-3); }
+
+mark {
+  background: rgba(217, 178, 95, 0.45);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+kbd {
+  font-family: var(--font-type);
+  font-size: 10px;
+  border: 1px solid var(--color-line-2);
+  border-bottom-width: 2.5px;
+  border-radius: 4px;
+  background: var(--color-cream);
+  color: var(--color-ink-2);
+  padding: 1px 6px;
+}
+
+/* ---------- دانه و سطح‌های کهنه ---------- */
+
+.grain-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.aged-card {
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 250, 232, 0.85), transparent 55%),
+    linear-gradient(165deg, #f9f0da 0%, #f2e5c6 55%, #eadbb6 100%);
+  border: 1px solid var(--color-line);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 248, 228, 0.55),
+    inset 0 0 34px rgba(139, 90, 43, 0.16),
+    inset 0 0 7px rgba(120, 70, 20, 0.12),
+    0 14px 30px -18px rgba(43, 32, 20, 0.45);
+}
+.aged-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+}
+.aged-card > :is(*:not(.absolute), .spot-anchor) { position: relative; z-index: 1; }
+
+/* کارت سه‌بعدی با نورِ دنبال‌کننده‌ی موس */
+.tilt-card {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+  will-change: transform;
+}
+.tilt-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 30%), rgba(217, 178, 95, 0.28), transparent 62%);
+}
+.tilt-card:hover { --lift: -6px; box-shadow: 0 26px 46px -20px rgba(43, 32, 20, 0.55), inset 0 0 34px rgba(139, 90, 43, 0.16); }
+.tilt-card:hover::before { opacity: 1; }
+.tilt-card:focus-visible { outline: 2px dashed var(--color-gold-3); outline-offset: 4px; }
+
+.dark-panel {
+  background:
+    radial-gradient(900px 400px at 50% -10%, rgba(185, 138, 47, 0.14), transparent 60%),
+    linear-gradient(180deg, #241a10 0%, #1e150d 100%);
+}
+
+.sunburst {
+  background-image: repeating-conic-gradient(
+    from 0deg at 50% 38%,
+    rgba(168, 116, 31, 0.075) 0deg 5deg,
+    transparent 5deg 11deg
+  );
+  -webkit-mask-image: radial-gradient(closest-side at 50% 40%, black 30%, transparent 78%);
+  mask-image: radial-gradient(closest-side at 50% 40%, black 30%, transparent 78%);
+}
+
+.scanlines {
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 3px);
+}
+
+.beam {
+  background:
+    radial-gradient(58% 42% at 50% 16%, rgba(217, 178, 95, 0.4), transparent 70%),
+    conic-gradient(from 180deg at 50% -8%, transparent 40%, rgba(217, 178, 95, 0.16) 50%, transparent 60%);
+}
+
+/* ---------- مُهر لاستیکی ---------- */
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1.5px solid currentColor;
+  outline: 1.5px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 5px;
+  padding: 1px 9px 2px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  transform: rotate(-3.5deg);
+  opacity: 0.88;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.92 0.08'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.92 0.08'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes stamp-in {
+  0% { transform: rotate(-14deg) scale(1.9); opacity: 0; }
+  55% { transform: rotate(-3.5deg) scale(0.94); opacity: 0.95; }
+  100% { transform: rotate(-3.5deg) scale(1); opacity: 0.88; }
+}
+.stamp-in { animation: stamp-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* ---------- حرکت ---------- */
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 60s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+@keyframes bob {
+  from { transform: translateY(-4px); }
+  to { transform: translateY(5px); }
+}
+.animate-bob { animation: bob 3.2s ease-in-out infinite alternate; }
+
+@keyframes dust-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  15% { opacity: 0.7; }
+  85% { opacity: 0.4; }
+  100% { transform: translateY(-130px) translateX(14px); opacity: 0; }
+}
+.dust { animation: dust-rise 9s linear infinite; }
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.animate-spin-slow { animation: spin-slow 90s linear infinite; }
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(26px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-panel { animation: modal-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fade-in 0.3s ease both; }
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in { animation: rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes lamp-flicker {
+  0%, 100% { opacity: 0.85; }
+  8% { opacity: 0.7; }
+  12% { opacity: 0.92; }
+  40% { opacity: 0.78; }
+  62% { opacity: 0.95; }
+  80% { opacity: 0.75; }
+}
+.lamp-glow { animation: lamp-flicker 6s ease-in-out infinite; }
+
+@keyframes caret-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+.caret::after {
+  content: "▌";
+  font-size: 0.72em;
+  color: var(--color-sienna);
+  animation: caret-blink 0.9s steps(1) infinite;
+  margin-inline-start: 2px;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2.4deg); }
+}
+.wobble-slow { animation: wobble 7s ease-in-out infinite; transform-origin: 50% 0%; }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1), transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-in { opacity: 1; transform: none; }
+
+/* خطِ زمانِ عمودی که با ورود به دید رشد می‌کند */
+.grow-line {
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.25s;
+}
+.is-in .grow-line { transform: scaleY(1); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ---------- نوار پیشرفت بازدید ---------- */
+
+.progress-gold {
+  background: linear-gradient(90deg, var(--color-sienna), var(--color-gold) 60%, var(--color-gold-2));
+  box-shadow: 0 0 8px rgba(185, 138, 47, 0.7);
+  transition: width 0.12s linear;
+}
+
+/* ---------- دفترچه و یادداشت‌های سنجاق‌شده ---------- */
+
+.paper-note {
+  position: relative;
+  background: linear-gradient(170deg, #fdf7e4, #f3e6c4);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 10px 22px -14px rgba(43, 32, 20, 0.5);
+}
+.paper-note::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  right: 22px;
+  width: 64px;
+  height: 20px;
+  transform: rotate(-4deg);
+  background: linear-gradient(180deg, rgba(217, 178, 95, 0.55), rgba(217, 178, 95, 0.3));
+  border: 1px solid rgba(138, 100, 32, 0.25);
+  box-shadow: 0 2px 4px rgba(43, 32, 20, 0.15);
+}
+
+/* ---------- درهای ورودی موزه ---------- */
+
+.door-panel {
+  transition: transform 0.85s cubic-bezier(0.7, 0, 0.3, 1);
+}
+.doors-open .door-panel[data-side="right"] { transform: translateX(102%); }
+.doors-open .door-panel[data-side="left"] { transform: translateX(-102%); }
+
+/* ---------- کشوی دفترچه ---------- */
+
+.drawer {
+  transform: translateX(-106%);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.drawer.open { transform: translateX(0); }
+
+/* ---------- اسلایدر تایم‌لاین ---------- */
+
+input.time-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 34px;
+  background: transparent;
+  cursor: pointer;
+}
+input.time-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #55401f, #b98a2f 50%, #55401f);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+input.time-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #ecd08a, #a8741f 72%);
+  border: 2px solid #4a3417;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  transition: transform 0.15s ease;
+}
+input.time-range::-webkit-slider-thumb:hover { transform: scale(1.14); }
+input.time-range:focus-visible { outline: 2px dashed var(--color-gold-2); outline-offset: 6px; border-radius: 8px; }
+input.time-range::-moz-range-track {
+  height: 6px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #55401f, #b98a2f 50%, #55401f);
+}
+input.time-range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #ecd08a, #a8741f 72%);
+  border: 2px solid #4a3417;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
+}
+input.time-range:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---------- متفرقه ---------- */
+
+.emoji-aged { filter: sepia(0.32) saturate(0.92) contrast(1.04); }
+
+.dash-row { border-bottom: 1px dashed var(--color-line-2); }
+
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1.5px;
+  background-repeat: no-repeat;
+  background-position: 100% 100%;
+  transition: background-size 0.3s ease;
+}
+.link-underline:hover { background-size: 100% 1.5px; }
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  width: 38px;
+  border-radius: 9999px;
+  border: 1px solid rgba(217, 178, 95, 0.35);
+  color: var(--color-paper-3);
+  transition: all 0.25s ease;
+  position: relative;
+}
+.icon-btn:hover {
+  border-color: var(--color-gold-2);
+  color: var(--color-gold-2);
+  background: rgba(185, 138, 47, 0.12);
+  transform: translateY(-1px);
+}
+.icon-btn:active { transform: scale(0.92); }
+
+.dot-item {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  transform: translateX(50%) scale(1);
+  transition: transform 0.25s ease, opacity 0.3s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  border: 1.5px solid rgba(30, 21, 13, 0.8);
+}
+.dot-item:hover { transform: translateX(50%) scale(1.9); z-index: 10; box-shadow: 0 0 0 4px rgba(217, 178, 95, 0.35); }
+
+/* ---------- نسخه‌ی پیشرفته: عکس واقعی، تایم‌لاین، چسب کاغذ ---------- */
+
+.photo-aged {
+  filter: sepia(0.28) saturate(0.92) contrast(1.06);
+}
+
+@keyframes decade-flip-kf {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em) rotateX(45deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.decade-flip {
+  display: inline-block;
+  animation: decade-flip-kf 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes grow-y-kf {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.grow-y {
+  transform-origin: bottom;
+  animation: grow-y-kf 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.playhead {
+  position: absolute;
+  top: -0.4rem;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #e8c07a, rgba(232, 192, 122, 0));
+  transition: right 0.25s ease;
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 12px rgba(232, 192, 122, 0.7);
+}
+.playhead::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e8c07a;
+  box-shadow: 0 0 14px 3px rgba(232, 192, 122, 0.65);
+}
+
+/* ---------- کارتریج‌های بازی ---------- */
+
+.cart-card {
+  display: block;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #4a3a24;
+  background: linear-gradient(180deg, #2c2013 0%, #201710 100%);
+  box-shadow: 0 14px 26px -16px rgba(0, 0, 0, 0.55);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  text-align: right;
+}
+.cart-card:hover {
+  transform: translateY(-5px) rotate(-0.4deg);
+  box-shadow: 0 28px 46px -18px rgba(0, 0, 0, 0.65);
+}
+.cart-card:active { transform: translateY(-1px) scale(0.985); }
+.cart-grooves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 3px, transparent 3px 10px);
+}
+
+.eq-bar {
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: #d9b25f;
+  transition: height 0.25s ease;
+}
+[data-playing="true"] .eq-bar {
+  animation: eq-kf 0.65s ease-in-out infinite alternate;
+}
+@keyframes eq-kf {
+  from { height: 4px; }
+  to { height: 16px; }
+}
+
+.shimmer {
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.05) 30%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.05) 70%);
+  background-size: 220% 100%;
+  animation: shimmer-kf 1.3s linear infinite;
+}
+@keyframes shimmer-kf {
+  to { background-position: -220% 0; }
+}
+
+.bulb {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #d9b25f;
+  animation: bulb-kf 1.6s ease-in-out infinite;
+}
+@keyframes bulb-kf {
+  0%, 100% { opacity: 0.2; box-shadow: none; }
+  50% { opacity: 1; box-shadow: 0 0 10px rgba(217, 178, 95, 0.8); }
+}
+
+.tape {
+  position: absolute;
+  top: -7px;
+  right: 26px;
+  z-index: 3;
+  width: 76px;
+  height: 19px;
+  background: rgba(217, 178, 95, 0.55);
+  transform: rotate(-4deg);
+  box-shadow: 0 2px 5px rgba(43, 32, 20, 0.12);
+  border-inline: 1px dashed rgba(139, 90, 43, 0.35);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  .grow-line { transform: scaleY(1) !important; }
+  .ticker-track { animation: none !important; }
+  .tilt-card { transform: none !important; }
+}
